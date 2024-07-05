@@ -181,7 +181,7 @@ impl GameState {
     }
 
     pub fn uncover(&mut self, x: i64, y: i64) {
-        if self.board.contains_key(&(x, y)) { return; }  // already uncovered
+        if self.is_uncovered(x, y) { return; }
         let current_time = seconds_since(self.epoch);
         self.board.insert((x, y), DbTile {
             player_id: self.player_id,
@@ -212,24 +212,36 @@ impl GameState {
         // Pick a random recently uncovered tile
         let mut rng = rand::thread_rng();
         println!("There are {} recent tiles", self.uncover_history.len());
-        let (x, y) = if self.uncover_history.is_empty() {
+        let (origin_x, origin_y) = if self.uncover_history.is_empty() {
             (0, 0)
         } else {
             let random_index = rng.gen_range(0..self.uncover_history.len());
             self.uncover_history.iter().nth(random_index).unwrap().clone()
         };
-        println!("Picked tile ({}, {})", x, y);
+        println!("Picked tile ({}, {})", origin_x, origin_y);
         // Pick a random angle and use a line drawing algorithm to walk in that direction until a
         // suitable tile is found.
         let angle = rng.gen_range(0.0..std::f64::consts::PI * 2.0);
         println!("Picked angle {}", angle);
+        let mut steps = 0;
         for (dx, dy) in bresenham_line_towards_angle(angle) {
-            println!("Checking tile ({}, {})", x + dx, y + dy);
-            if !self.is_mine(x + dx, y + dy) && self.adjacent_mines(x + dx, y + dy) == 0 {
-                return (x + dx, y + dy);
+            let x = origin_x + dx;
+            let y = origin_y + dy;
+            println!("Checking tile ({}, {})", x, y);
+            if self.is_uncovered(x, y) {
+                steps = 0;
+            } else {
+                steps += 1;
+                if steps > 5 && !self.is_mine(x, y) && self.adjacent_mines(x, y) == 0 {
+                    return (x, y);
+                }
             }
         }
         (0, 0)
+    }
+
+    pub fn is_uncovered(&self, x: i64, y: i64) -> bool {
+        self.board.contains_key(&(x, y))
     }
 
     pub fn is_mine(&self, x: i64, y: i64) -> bool {
