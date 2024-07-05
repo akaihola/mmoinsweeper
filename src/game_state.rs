@@ -224,9 +224,7 @@ impl GameState {
         let angle = rng.gen_range(0.0..std::f64::consts::PI * 2.0);
         println!("Picked angle {}", angle);
         let mut steps = 0;
-        for (dx, dy) in bresenham_line_towards_angle(angle) {
-            let x = origin_x + dx;
-            let y = origin_y + dy;
+        for (x, y) in bresenham_line_towards_angle(angle, origin_x, origin_y) {
             println!("Checking tile ({}, {})", x, y);
             if self.is_uncovered(x, y) {
                 steps = 0;
@@ -261,11 +259,11 @@ impl GameState {
     }
 }
 
-fn bresenham_line_towards_angle(angle: f64) -> impl Iterator<Item=(i64, i64)> {
+fn bresenham_line_towards_angle(angle: f64, x0: i64, y0: i64) -> impl Iterator<Item=(i64, i64)> {
     let dx = (angle.cos() * 10000.0).round() as i32;
     let dy = (angle.sin() * 10000.0).round() as i32;
-    let mut x = 0;
-    let mut y = 0;
+    let mut x = x0;
+    let mut y = y0;
     let dx_abs = dx.abs();
     let dy_abs = dy.abs();
     let x_step = if dx > 0 { 1 } else { -1 };
