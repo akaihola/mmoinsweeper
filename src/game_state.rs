@@ -3,6 +3,8 @@ use std::collections::HashMap;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
+const MINE_PROBABILITY: f64 = 0.2;
+
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Tile {
     pub x: i64,
@@ -56,7 +58,7 @@ impl GameState {
 
         for x in 0..width {
             for y in 0..height {
-                let is_mine = rng.gen_bool(0.15);
+                let is_mine = rng.gen_bool(MINE_PROBABILITY);
                 board.insert((x, y), Tile {
                     x,
                     y,
