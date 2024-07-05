@@ -1,0 +1,218 @@
+USER:
+
+You are an expert prompt engineer. Your task is to deeply understand what I want, and in return respond with a well crafted prompt that, if fed to a separate AI, will get me exactly the result I want.
+
+The prompt follows this rough outline, and makes sure to include each part as needed:
+
+1. A persona. At the start, you write something to the affect of "Act as an expert in ..." This primes the LLM to respond from info relating to experts in the specific field.
+2. The task. This part of the prompt involves exhaustively laying out the task for the LLM. It is critical this part is specific and clear. This is the most important part of the prompt.
+3. Context. Make sure to include *any* context that is needed for the LLM to accurately, and reliably respond as needed.
+4. Response format. Outline the ideal response format for this prompt.
+5. Examples. This step is optional, but if examples would be beneficial, include them.
+6. Input. If needed, leave a space in the prompt for any input data. This should be highlight between brackets [like this]
+
+Some other important notes:
+- Instruct the model to list out it's thoughts before giving an answer.
+- If complex reasoning is required, include directions for the LLM to think step by step, and weigh all sides of the topic before settling on an answer.
+- Where appropriate, make sure to utilize advanced prompt engineering techniques. These include, but are not limited to: Chain of Thought, Debate simulations, Self Reflection, and Self Consistency.
+- Strictly use text, no code please
+
+Please craft the perfect prompt for my request below
+
+---
+
+I'm going to start creating a very simple massively multiplayer online mobile game. I want to actively get expert advice from a language model on how to best organize my work, design the game and its architecture, select tools and technologies, and do the actual development. In the beginning I want to create the minimal documentation which will get me started and ensure success. Please create the first prompt to get this process started.
+
+
+ASSISTANT:
+
+Certainly. Based on your request, I'll craft a prompt that will help you get expert advice on starting your massively multiplayer online mobile game project. Here's the prompt:
+
+Act as an expert game developer specializing in massively multiplayer online (MMO) mobile games. You have extensive experience in game design, architecture, project management, and mobile development technologies.
+
+Your task is to provide comprehensive guidance to a developer starting a simple MMO mobile game project. Focus on helping them organize their work, design the game and its architecture, select appropriate tools and technologies, and begin the development process. Your primary goal is to help create minimal but essential documentation to kickstart the project and ensure its success.
+
+Before providing your recommendations, carefully consider the following aspects:
+1. The scope of a "simple" MMO mobile game
+2. The unique challenges of developing for mobile platforms
+3. The infrastructure required for an MMO game
+4. The balance between simplicity and scalability
+5. The importance of user engagement and retention in mobile games
+
+Please structure your response as follows:
+
+1. Initial Thoughts: List out your immediate considerations and questions about the project.
+
+2. Project Organization:
+   a. Outline a basic project structure
+   b. Suggest essential documentation to create
+   c. Recommend project management tools or methodologies
+
+3. Game Design:
+   a. Provide a framework for defining core gameplay mechanics
+   b. Discuss important design considerations for mobile MMOs
+   c. Suggest ways to keep the game "simple" while still engaging
+
+4. Architecture Design:
+   a. Outline a high-level architecture for a simple mobile MMO
+   b. Discuss client-server communication strategies
+   c. Address data persistence and state management
+
+5. Technology Stack:
+   a. Recommend game engines or frameworks suitable for mobile MMO development
+   b. Suggest backend technologies for game servers
+   c. Discuss database options for player and game data
+
+6. Development Approach:
+   a. Outline a phased development plan
+   b. Suggest priorities for early development stages
+   c. Discuss testing strategies for mobile and multiplayer aspects
+
+7. Next Steps:
+   Provide 3-5 concrete actions the developer should take to begin the project
+
+Throughout your response, emphasize simplicity and minimal viable product (MVP) approach while ensuring that the foundation laid can support future growth and complexity. Think step-by-step through each section, considering potential challenges and trade-offs. If you're unsure about any aspect, explicitly state your uncertainties and provide multiple options with their pros and cons.
+
+[If there are any specific features or constraints for the game that you'd like to mention, please provide them here.]
+
+
+USER:
+
+Act as an expert game developer specializing in massively multiplayer online (MMO) mobile games. You have extensive experience in game design, architecture, project management, and mobile development technologies.
+
+Your task is to provide comprehensive guidance to a developer starting a simple MMO mobile game project. Focus on helping them organize their work, design the game and its architecture, select appropriate tools and technologies, and begin the development process. Your primary goal is to help create minimal but essential documentation to kickstart the project and ensure its success.
+
+Before providing your recommendations, carefully consider the following aspects:
+1. The scope of a "simple" MMO mobile game
+2. The unique challenges of developing for mobile platforms
+3. The infrastructure required for an MMO game
+4. The balance between simplicity and scalability
+5. The importance of user engagement and retention in mobile games
+
+Please structure your response as follows:
+
+1. Initial Thoughts: List out your immediate considerations and questions about the project.
+
+2. Suggest essential minimal initial documentation to create
+
+3. Next Steps:
+   Provide 3-5 concrete actions the developer should take to begin the project
+
+Throughout your response, emphasize simplicity and minimal viable product (MVP) approach while ensuring that the foundation laid can support future growth and complexity. Think step-by-step through each section, considering potential challenges and trade-offs. If you're unsure about any aspect, explicitly state your uncertainties and provide multiple options with their pros and cons.
+
+Due to time allocation and skill constraints, the developer would like to implement the backend in Rust and the frontend in pure standards-based web technologies (HTML/Canvas/SVG, CSS, JavaScript) without the need to learn any frameworks or extensive development tooling.
+
+
+ASSISTANT:
+
+Thank you for providing such a detailed context for this task. As an expert game developer specializing in MMO mobile games, I'll do my best to guide the developer through the initial stages of their project. Let's begin by addressing each section you've outlined.
+
+1. Initial Thoughts:
+
+
+
+a) Scope definition: What constitutes a "simple" MMO mobile game? We need to clearly define the core features and gameplay elements.
+
+b) Platform considerations: Which mobile platforms will be targeted (iOS, Android, or both)? This affects development choices and potential challenges.
+
+c) Server architecture: How will we design a scalable backend to handle concurrent players and game state management?
+
+d) Network optimization: Mobile networks can be unreliable. How will we ensure a smooth experience for players?
+
+e) Data persistence: What's our strategy for saving game state and player progress?
+
+f) Security concerns: How will we protect against cheating and ensure fair gameplay?
+
+g) Monetization strategy: Will the game be free-to-play with in-app purchases, or use a different model?
+
+h) Player engagement: What features will keep players coming back to the game?
+
+i) Performance optimization: How can we ensure the game runs smoothly on a wide range of mobile devices?
+
+j) Regulatory compliance: Are there any legal considerations (e.g., data protection, age restrictions) we need to address?
+
+k) Technology stack: How can we best utilize Rust for the backend and web technologies for the frontend to create an efficient and scalable game?
+
+2. Essential Minimal Initial Documentation:
+
+
+
+
+
+# Essential Initial Documentation for MMO Mobile Game
+
+## 1. Game Design Document (GDD)
+- Game concept and unique selling points
+- Core gameplay mechanics
+- Basic storyline or setting (if applicable)
+- Player progression system
+- Minimal feature set for MVP
+
+## 2. Technical Design Document (TDD)
+- High-level architecture overview
+- Backend (Rust):
+  - Server architecture
+  - Database design
+  - API endpoints
+- Frontend (Web Technologies):
+  - UI/UX wireframes
+  - Asset list (minimal set of graphics, sounds, etc.)
+  - Client-side logic overview
+
+## 3. Project Roadmap
+- Development phases
+- Milestones and deadlines
+- Resource allocation
+
+## 4. Risk Assessment
+- Potential technical challenges
+- Scalability concerns
+- Platform-specific issues
+
+## 5. Monetization Plan
+- Revenue model (e.g., free-to-play with in-app purchases)
+- Basic economy design
+
+## 6. Testing Strategy
+- Unit testing approach
+- Integration testing plan
+- Beta testing phases
+
+## 7. Deployment Plan
+- Server setup and configuration
+- App store submission checklist (if applicable)
+- Update and maintenance strategy
+
+
+This documentation set provides a solid foundation for the project while remaining minimal. It covers the essential aspects of game design, technical architecture, project management, and business considerations.
+
+3. Next Steps:
+
+Here are five concrete actions the developer should take to begin the project:
+
+a) Flesh out the Game Design Document (GDD):
+   Start by clearly defining the core gameplay loop, main features, and minimal viable product (MVP) scope. This will guide all subsequent development decisions.
+
+b) Set up the development environment:
+   Configure the Rust development environment for the backend and set up a basic web development workspace for the frontend. This includes installing necessary tools, configuring version control, and setting up a basic project structure.
+
+c) Create a basic server-client architecture:
+   Implement a simple Rust server that can handle basic client connections and a rudimentary web client that can connect to the server. This will serve as the foundation for further development.
+
+d) Implement a basic game loop:
+   Develop a simple game loop on the client-side using HTML5 Canvas or SVG, and basic JavaScript. This should include rendering a game world and handling user input.
+
+e) Design and implement the database schema:
+   Create a minimal database schema to store essential game data (e.g., player information, game state). Implement basic CRUD operations in the Rust backend.
+
+Throughout the development process, it's crucial to keep the following in mind:
+
+1. Start with the simplest possible implementation that demonstrates the core concept.
+2. Focus on creating a solid, scalable architecture that can be built upon later.
+3. Regularly test on various mobile devices to ensure performance and compatibility.
+4. Keep security in mind from the beginning, even for seemingly simple features.
+5. Document code and design decisions to facilitate future development and onboarding of potential team members.
+
+By following these steps and keeping the project scope minimal initially, the developer can create a strong foundation for their MMO mobile game. As the project progresses, they can iteratively add features and complexity while ensuring that the core gameplay experience remains solid and engaging.
+
+
