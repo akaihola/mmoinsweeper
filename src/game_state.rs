@@ -26,9 +26,14 @@ pub struct ClientTile {
     pub is_mine: bool,
 }
 
+#[derive(Clone)]
+pub struct DbPlayer {
+    pub color: String,
+    pub score: u32,
+}
+
 #[derive(Serialize, Deserialize, Clone)]
-pub struct Player {
-    pub id: u32,
+pub struct ClientPlayer {
     pub color: String,
     pub score: u32,
 }
@@ -54,13 +59,13 @@ pub struct GameStateResponse {
     pub last_action_x: i64,
     pub last_action_y: i64,
     pub tiles: Vec<ClientTile>,
-    pub players: Vec<Player>,
+    pub players: HashMap<u32, ClientPlayer>,
 }
 
 pub struct GameState {
     pub epoch: u32,
     pub board: HashMap<(i64, i64), DbTile>,
-    pub players: HashMap<u32, Player>,
+    pub players: HashMap<u32, DbPlayer>,
     pub next_player_id: u32,
     pub player_id: u32,  // zero = not yet playing or game over
     uncover_history: VecDeque<(i64, i64)>,  // (x, y)
@@ -88,8 +93,7 @@ impl GameState {
                 self.player_id = self.next_player_id;  // non-zero = playing
                 self.next_player_id += 1;
                 let color = format!("#{:06x}", rand::thread_rng().gen_range(0..0xFFFFFF));
-                self.players.insert(self.player_id, Player {
-                    id: self.player_id,
+                self.players.insert(self.player_id, DbPlayer {
                     color,
                     score: 0,
                 });
@@ -113,7 +117,7 @@ impl GameState {
                     last_action_x: last_action_tile.0,
                     last_action_y: last_action_tile.1,
                     tiles: self.visible_tiles(visible_top, visible_bottom, visible_left, visible_right),
-                    players: self.players.values().cloned().collect(),
+                    players: self.players_response(),
                 };
             }
             "uncover" => {
@@ -146,11 +150,19 @@ impl GameState {
             last_action_x: last_action_tile.0,
             last_action_y: last_action_tile.1,
             tiles: self.visible_tiles(action.visible_top, action.visible_bottom, action.visible_left, action.visible_right),
-            players: self.players.values().cloned().collect(),
+            players: self.players_response(),
         }
     }
 
-    pub fn visible_tiles(&self, visible_top: i64, visible_bottom: i64, visible_left: i64, visible_right: i64) -> Vec<ClientTile> {
+    pub fn players_response(&self) -> HashMap<u32, ClientPlayer> {
+        self.players.iter().map(|(&id, player)| {
+            (id, ClientPlayer {
+                color: player.color.clone(),
+                score: player.score,
+            })
+        }).collect()
+    }
+
         self.board.iter().filter_map(|(&(x, y), db_tile)| {
             if x >= visible_left && x <= visible_right &&
                 y >= visible_top && y <= visible_bottom {

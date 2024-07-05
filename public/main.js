@@ -97,7 +97,7 @@ ws.onmessage = (event) => {
 function renderGame() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     gameState.tiles.forEach(tile => {
-        ctx.fillStyle = tile.is_mine ? 'red' : 'white';
+        ctx.fillStyle = tile.is_mine ? 'red' : gameState.players[tile.player_id].color;
         ctx.fillRect(
             tile.x * TILE_SIZE - gameState.view_left,
             tile.y * TILE_SIZE - gameState.view_top,
@@ -113,12 +113,12 @@ function renderGame() {
             );
         }
     });
-    gameState.players.forEach(player => {
+    Object.entries(gameState.players).forEach(([playerId, player]) => {
         ctx.fillStyle = player.color;
         ctx.fillText(
-            `Player ${player.id}: ${player.score}`,
+            `Player ${playerId}: ${player.score}`,
             TILE_SIZE / 2,
-            TILE_SIZE * player.id
+            TILE_SIZE * playerId
         );
     });
 }
