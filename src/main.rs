@@ -1,5 +1,4 @@
 use std::sync::{Arc, Mutex};
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use futures_util::{SinkExt, StreamExt};
 use tokio::net::TcpListener;
@@ -10,19 +9,9 @@ use game_state::{GameState, PlayerAction};
 mod game_state;
 
 fn format_now() -> String {
-    let system_time = SystemTime::now();
-    match system_time.duration_since(UNIX_EPOCH) {
-        Ok(duration) => {
-            let millis = duration.as_millis(); // Total milliseconds
-            let seconds = (millis / 1000) % 60;
-            let minutes = (millis / (1000 * 60)) % 60;
-            let hours = (millis / (1000 * 60 * 60)) % 24;
-            let milliseconds = millis % 1000;
-            format!("{:02}:{:02}:{:02}.{:03}", hours, minutes, seconds, milliseconds)
-        }
-        Err(_) => String::from("Time error"),
-    }
+    chrono::Utc::now().format("%H:%M:%S%.3f").to_string()
 }
+
 
 #[tokio::main]
 async fn main() {
