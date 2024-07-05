@@ -49,6 +49,7 @@ pub struct GameState {
     pub board: HashMap<(i64, i64), Tile>,
     pub players: HashMap<u32, Player>,
     pub next_player_id: u32,
+    pub playing: bool,
 }
 
 impl GameState {
@@ -94,6 +95,7 @@ impl GameState {
             board,
             players: HashMap::new(),
             next_player_id: 1,
+            playing: false,
         }
     }
 
@@ -132,6 +134,7 @@ impl GameState {
                         break 'find_starting_tile;
                     }
                 }
+                self.playing = true;
                 self.uncover(last_action_tile.0, last_action_tile.1);
 
                 // Calculate size of visible area from action.visible_{top,bottom,left,right} fields
@@ -166,14 +169,13 @@ impl GameState {
             }
             "uncover" => {
                 if let Some(tile) = self.board.get_mut(&(action.x, action.y)) {
-                    match (tile.is_uncovered, tile.is_mine) {
-                        (false, true) => {
+                    match (self.playing, tile.is_uncovered, tile.is_mine) {
+                        (true, false, true) => {
                             // Game over
-                            for tile in self.board.values_mut() {
-                                tile.is_uncovered = true;
-                            }
+                            tile.is_uncovered = true;
+                            self.playing = false;
                         }
-                        (false, false) => {
+                        (true, false, false) => {
                             tile.is_uncovered = true;
                             if let Some(player) = self.players.get_mut(&action.player_id) {
                                 player.score += 1;
