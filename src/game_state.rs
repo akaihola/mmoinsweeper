@@ -163,9 +163,10 @@ impl GameState {
         }).collect()
     }
 
+    pub fn visible_tiles(&self, top: i64, bottom: i64, left: i64, right: i64) -> Vec<ClientTile> {
         self.board.iter().filter_map(|(&(x, y), db_tile)| {
-            if x >= visible_left && x <= visible_right &&
-                y >= visible_top && y <= visible_bottom {
+            if x >= left && x <= right &&
+                y >= top && y <= bottom {
                 Some(ClientTile {
                     x,
                     y,
