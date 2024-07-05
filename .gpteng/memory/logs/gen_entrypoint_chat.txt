@@ -1,0 +1,286 @@
+
+2024-07-05T11:36:15.660997
+================================ System Message ================================
+
+You will get information about a codebase that is currently on disk in the current folder.
+The user will ask you to write a script that runs the code in a specific way.
+You will answer with code blocks that include all the necessary terminal commands.
+Do not install globally. Do not use sudo.
+Do not explain the code, just give the commands.
+Do not use placeholders, use example values (like . for a folder argument) if necessary.
+
+
+================================ Human Message =================================
+
+
+        Make a unix script that
+        a) installs dependencies
+        b) runs all necessary parts of the codebase (in parallel if necessary)
+        
+Information about the codebase:
+
+```
+File: Cargo.toml
+1 [package]
+2 name = "minesweeper_server"
+3 version = "0.1.0"
+4 edition = "2018"
+5 
+6 [dependencies]
+7 tokio = { version = "1", features = ["full"] }
+8 tokio-tungstenite = "0.15"
+9 serde = { version = "1.0", features = ["derive"] }
+10 serde_json = "1.0"
+11 rand = "0.8"
+
+File: src/main.rs
+1 use tokio::net::TcpListener;
+2 use tokio_tungstenite::accept_async;
+3 use futures_util::StreamExt;
+4 use std::sync::{Arc, Mutex};
+5 use serde::{Serialize, Deserialize};
+6 use rand::Rng;
+7 
+8 mod game_state;
+9 use game_state::{GameState, PlayerAction};
+10 
+11 #[tokio::main]
+12 async fn main() {
+13     let addr = "127.0.0.1:8080";
+14     let listener = TcpListener::bind(&addr).await.expect("Failed to bind");
+15 
+16     let game_state = Arc::new(Mutex::new(GameState::new(1000, 1000)));
+17 
+18     while let Ok((stream, _)) = listener.accept().await {
+19         let game_state = game_state.clone();
+20         tokio::spawn(async move {
+21             let ws_stream = accept_async(stream).await.expect("Failed to accept");
+22             let (mut write, mut read) = ws_stream.split();
+23 
+24             while let Some(Ok(msg)) = read.next().await {
+25                 if msg.is_text() {
+26                     let action: PlayerAction = serde_json::from_str(msg.to_text().unwrap()).unwrap();
+27                     let response = game_state.lock().unwrap().process_action(action);
+28                     let response_text = serde_json::to_string(&response).unwrap();
+29                     write.send(tokio_tungstenite::tungstenite::Message::Text(response_text)).await.unwrap();
+30                 }
+31             }
+32         });
+33     }
+34 }
+
+File: src/game_state.rs
+1 use serde::{Serialize, Deserialize};
+2 use rand::Rng;
+3 use std::collections::HashMap;
+4 
+5 #[derive(Serialize, Deserialize, Clone)]
+6 pub struct Tile {
+7     pub x: i64,
+8     pub y: i64,
+9     pub is_mine: bool,
+10     pub adjacent_mines: u8,
+11 }
+12 
+13 #[derive(Serialize, Deserialize, Clone)]
+14 pub struct Player {
+15     pub id: u32,
+16     pub color: String,
+17     pub score: u32,
+18 }
+19 
+20 #[derive(Serialize, Deserialize)]
+21 pub struct PlayerAction {
+22     pub player_id: u32,
+23     pub action_type: String,
+24     pub x: i64,
+25     pub y: i64,
+26 }
+27 
+28 #[derive(Serialize, Deserialize)]
+29 pub struct GameStateResponse {
+30     pub tiles: Vec<Tile>,
+31     pub players: Vec<Player>,
+32 }
+33 
+34 pub struct GameState {
+35     pub board: HashMap<(i64, i64), Tile>,
+36     pub players: HashMap<u32, Player>,
+37     pub next_player_id: u32,
+38 }
+39 
+40 impl GameState {
+41     pub fn new(width: i64, height: i64) -> Self {
+42         let mut board = HashMap::new();
+43         let mut rng = rand::thread_rng();
+44 
+45         for x in 0..width {
+46             for y in 0..height {
+47                 let is_mine = rng.gen_bool(0.15);
+48                 board.insert((x, y), Tile {
+49                     x,
+50                     y,
+51                     is_mine,
+52                     adjacent_mines: 0,
+53                 });
+54             }
+55         }
+56 
+57         for x in 0..width {
+58             for y in 0..height {
+59                 let mut adjacent_mines = 0;
+60                 for dx in -1..=1 {
+61                     for dy in -1..=1 {
+62                         if dx == 0 && dy == 0 {
+63                             continue;
+64                         }
+65                         if let Some(tile) = board.get(&(x + dx, y + dy)) {
+66                             if tile.is_mine {
+67                                 adjacent_mines += 1;
+68                             }
+69                         }
+70                     }
+71                 }
+72                 if let Some(tile) = board.get_mut(&(x, y)) {
+73                     tile.adjacent_mines = adjacent_mines;
+74                 }
+75             }
+76         }
+77 
+78         GameState {
+79             board,
+80             players: HashMap::new(),
+81             next_player_id: 1,
+82         }
+83     }
+84 
+85     pub fn process_action(&mut self, action: PlayerAction) -> GameStateResponse {
+86         match action.action_type.as_str() {
+87             "join" => {
+88                 let player_id = self.next_player_id;
+89                 self.next_player_id += 1;
+90                 let color = format!("#{:06x}", rand::thread_rng().gen_range(0..0xFFFFFF));
+91                 self.players.insert(player_id, Player {
+92                     id: player_id,
+93                     color,
+94                     score: 0,
+95                 });
+96             }
+97             "uncover" => {
+98                 if let Some(tile) = self.board.get_mut(&(action.x, action.y)) {
+99                     if !tile.is_mine {
+100                         if let Some(player) = self.players.get_mut(&action.player_id) {
+101                             player.score += 1;
+102                         }
+103                     }
+104                 }
+105             }
+106             _ => {}
+107         }
+108 
+109         GameStateResponse {
+110             tiles: self.board.values().cloned().collect(),
+111             players: self.players.values().cloned().collect(),
+112         }
+113     }
+114 }
+
+File: public/index.html
+1 <!DOCTYPE html>
+2 <html lang="en">
+3 <head>
+4     <meta charset="UTF-8">
+5     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+6     <title>Infinite Minesweeper</title>
+7     <link rel="stylesheet" href="styles.css">
+8 </head>
+9 <body>
+10     <canvas id="gameCanvas"></canvas>
+11     <div id="ui">
+12         <div id="score">Score: 0</div>
+13     </div>
+14     <script src="main.js"></script>
+15 </body>
+16 </html>
+
+File: public/styles.css
+1 body {
+2     margin: 0;
+3     overflow: hidden;
+4     display: flex;
+5     justify-content: center;
+6     align-items: center;
+7     height: 100vh;
+8     background-color: #f0f0f0;
+9 }
+10 
+11 #gameCanvas {
+12     border: 1px solid #000;
+13 }
+14 
+15 #ui {
+16     position: absolute;
+17     top: 10px;
+18     left: 10px;
+19     background: rgba(255, 255, 255, 0.8);
+20     padding: 10px;
+21     border-radius: 5px;
+22 }
+
+File: public/main.js
+1 const canvas = document.getElementById('gameCanvas');
+2 const ctx = canvas.getContext('2d');
+3 canvas.width = window.innerWidth;
+4 canvas.height = window.innerHeight;
+5 
+6 let gameState = {
+7     tiles: [],
+8     players: [],
+9 };
+10 
+11 const ws = new WebSocket('ws://localhost:8080');
+12 
+13 ws.onopen = () => {
+14     ws.send(JSON.stringify({ player_id: null, action_type: 'join', x: 0, y: 0 }));
+15 };
+16 
+17 ws.onmessage = (event) => {
+18     gameState = JSON.parse(event.data);
+19     renderGame();
+20 };
+21 
+22 canvas.addEventListener('click', (event) => {
+23     const x = Math.floor(event.clientX / 20);
+24     const y = Math.floor(event.clientY / 20);
+25     ws.send(JSON.stringify({ player_id: 1, action_type: 'uncover', x, y }));
+26 });
+27 
+28 function renderGame() {
+29     ctx.clearRect(0, 0, canvas.width, canvas.height);
+30     gameState.tiles.forEach(tile => {
+31         ctx.fillStyle = tile.is_mine ? 'red' : 'white';
+32         ctx.fillRect(tile.x * 20, tile.y * 20, 20, 20);
+33         if (!tile.is_mine && tile.adjacent_mines > 0) {
+34             ctx.fillStyle = 'black';
+35             ctx.fillText(tile.adjacent_mines, tile.x * 20 + 5, tile.y * 20 + 15);
+36         }
+37     });
+38     gameState.players.forEach(player => {
+39         ctx.fillStyle = player.color;
+40         ctx.fillText(`Player ${player.id}: ${player.score}`, 10, 20 * player.id);
+41     });
+42 }
+
+```
+
+================================== Ai Message ==================================
+
+```sh
+#!/bin/bash
+
+# Install dependencies
+cargo build --release
+
+# Run the server
+cargo run --release
+```
