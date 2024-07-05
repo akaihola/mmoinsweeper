@@ -1,7 +1,12 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 
+use chrono::Utc;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
+
+fn seconds_since(epoch: u32) -> u32 {
+    Utc::now().timestamp() as u32 - epoch
+}
 
 const MINE_PROBABILITY: f64 = 0.2;
 
@@ -10,7 +15,7 @@ pub struct Tile {
     pub x: i64,
     pub y: i64,
     pub is_mine: bool,
-    pub is_uncovered: bool,
+    pub uncovered: u32,  // seconds since beginning of game, zero = not uncovered
     pub adjacent_mines: u8,
 }
 
@@ -46,10 +51,12 @@ pub struct GameStateResponse {
 }
 
 pub struct GameState {
+    pub epoch: u32,
     pub board: HashMap<(i64, i64), Tile>,
     pub players: HashMap<u32, Player>,
     pub next_player_id: u32,
     pub playing: bool,
+    uncover_history: VecDeque<((i64, i64), u32)>, // ((x, y), timestamp)
 }
 
 impl GameState {
@@ -64,7 +71,7 @@ impl GameState {
                     x,
                     y,
                     is_mine,
-                    is_uncovered: false,
+                    uncovered: 0,
                     adjacent_mines: 0,
                 });
             }
@@ -92,10 +99,12 @@ impl GameState {
         }
 
         GameState {
+            epoch: seconds_since(0),
             board,
             players: HashMap::new(),
             next_player_id: 1,
             playing: false,
+            uncover_history: VecDeque::new(),
         }
     }
 
@@ -151,7 +160,7 @@ impl GameState {
                     .filter(|tile| {
                         tile.x >= visible_left && tile.x <= visible_right &&
                             tile.y >= visible_top && tile.y <= visible_bottom &&
-                            tile.is_uncovered
+                            tile.uncovered > 0
                     })
                     .cloned()
                     .collect();
@@ -169,14 +178,14 @@ impl GameState {
             }
             "uncover" => {
                 if let Some(tile) = self.board.get_mut(&(action.x, action.y)) {
-                    match (self.playing, tile.is_uncovered, tile.is_mine) {
-                        (true, false, true) => {
+                    match (self.playing, tile.uncovered, tile.is_mine) {
+                        (true, 0, true) => {
                             // Game over
-                            tile.is_uncovered = true;
+                            tile.uncovered = seconds_since(self.epoch);
                             self.playing = false;
                         }
-                        (true, false, false) => {
-                            tile.is_uncovered = true;
+                        (true, 0, false) => {
+                            tile.uncovered = seconds_since(self.epoch);
                             if let Some(player) = self.players.get_mut(&action.player_id) {
                                 player.score += 1;
                             }
@@ -195,7 +204,7 @@ impl GameState {
             .filter(|tile| {
                 tile.x >= action.visible_left && tile.x <= action.visible_right &&
                     tile.y >= action.visible_top && tile.y <= action.visible_bottom &&
-                    tile.is_uncovered
+                    tile.uncovered > 0
             })
             .cloned()
             .collect();
@@ -214,10 +223,20 @@ impl GameState {
 
     pub fn uncover(&mut self, x: i64, y: i64) {
         if let Some(tile) = self.board.get_mut(&(x, y)) {
-            if tile.is_uncovered {
+            if tile.uncovered > 0 {
                 return;
             }
-            tile.is_uncovered = true;
+            let current_time = seconds_since(self.epoch);
+            tile.uncovered = current_time;
+            self.uncover_history.push_back(((x, y), current_time));
+            // Remove items older than 10 minutes (600 seconds) unless the list is shorter than 100 items
+            while let Some((_, timestamp)) = self.uncover_history.front() {
+                if current_time - timestamp > 600 && self.uncover_history.len() > 100 {
+                    self.uncover_history.pop_front();
+                } else {
+                    break;
+                }
+            }
         }
     }
 }
