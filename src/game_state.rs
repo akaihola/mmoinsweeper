@@ -1,4 +1,6 @@
 use std::collections::{HashMap, VecDeque};
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 
 use chrono::Utc;
 use rand::Rng;
@@ -10,13 +12,18 @@ fn seconds_since(epoch: u32) -> u32 {
 
 const MINE_PROBABILITY: f64 = 0.2;
 
+pub struct DbTile {
+    pub uncovered: u32,  // seconds since beginning of game, zero = not uncovered
+    pub player_id: u32,
+}
+
 #[derive(Serialize, Deserialize, Clone)]
-pub struct Tile {
+pub struct ClientTile {
     pub x: i64,
     pub y: i64,
+    pub player_id: u32,
+    pub adjacent_mines: i8,
     pub is_mine: bool,
-    pub uncovered: u32,  // seconds since beginning of game, zero = not uncovered
-    pub adjacent_mines: u8,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -46,64 +53,30 @@ pub struct GameStateResponse {
     pub update_right: i64,
     pub last_action_x: i64,
     pub last_action_y: i64,
-    pub tiles: Vec<Tile>,
+    pub tiles: Vec<ClientTile>,
     pub players: Vec<Player>,
 }
 
 pub struct GameState {
     pub epoch: u32,
-    pub board: HashMap<(i64, i64), Tile>,
+    pub board: HashMap<(i64, i64), DbTile>,
     pub players: HashMap<u32, Player>,
     pub next_player_id: u32,
-    pub playing: bool,
-    uncover_history: VecDeque<((i64, i64), u32)>, // ((x, y), timestamp)
+    pub player_id: u32,  // zero = not yet playing or game over
+    uncover_history: VecDeque<(i64, i64)>,  // (x, y)
 }
 
 impl GameState {
-    pub fn new(width: i64, height: i64) -> Self {
-        let mut board = HashMap::new();
-        let mut rng = rand::thread_rng();
-
-        for x in 0..width {
-            for y in 0..height {
-                let is_mine = rng.gen_bool(MINE_PROBABILITY);
-                board.insert((x, y), Tile {
-                    x,
-                    y,
-                    is_mine,
-                    uncovered: 0,
-                    adjacent_mines: 0,
-                });
-            }
-        }
-
-        for x in 0..width {
-            for y in 0..height {
-                let mut adjacent_mines = 0;
-                for dx in -1..=1 {
-                    for dy in -1..=1 {
-                        if dx == 0 && dy == 0 {
-                            continue;
-                        }
-                        if let Some(tile) = board.get(&(x + dx, y + dy)) {
-                            if tile.is_mine {
-                                adjacent_mines += 1;
-                            }
-                        }
-                    }
-                }
-                if let Some(tile) = board.get_mut(&(x, y)) {
-                    tile.adjacent_mines = adjacent_mines;
-                }
-            }
-        }
+    pub fn new() -> Self {
+        let board = HashMap::new();
+        let epoch = seconds_since(0) - 1;
 
         GameState {
-            epoch: seconds_since(0),
+            epoch,
             board,
             players: HashMap::new(),
             next_player_id: 1,
-            playing: false,
+            player_id: 0,  // not yet playing
             uncover_history: VecDeque::new(),
         }
     }
@@ -112,38 +85,15 @@ impl GameState {
         let mut last_action_tile = (0, 0);
         match action.action_type.as_str() {
             "join" => {
-                let player_id = self.next_player_id;
+                self.player_id = self.next_player_id;  // non-zero = playing
                 self.next_player_id += 1;
                 let color = format!("#{:06x}", rand::thread_rng().gen_range(0..0xFFFFFF));
-                self.players.insert(player_id, Player {
-                    id: player_id,
+                self.players.insert(self.player_id, Player {
+                    id: self.player_id,
                     color,
                     score: 0,
                 });
-                // Find a random starting location for the player. The starting tile must not be a mine.
-                // The orthogonally and diagonally adjacent tiles must not be mines either.
-                'find_starting_tile:
-                loop {
-                    let x = rand::thread_rng().gen_range(0..1000);
-                    let y = rand::thread_rng().gen_range(0..1000);
-                    let mut valid = true;
-                    'check_adjacent:
-                    for dx in -1..=1 {
-                        for dy in -1..=1 {
-                            if let Some(tile) = self.board.get(&(x + dx, y + dy)) {
-                                if tile.is_mine {
-                                    valid = false;
-                                    break 'check_adjacent;
-                                }
-                            }
-                        }
-                    }
-                    if valid {
-                        last_action_tile = (x, y);
-                        break 'find_starting_tile;
-                    }
-                }
-                self.playing = true;
+                last_action_tile = self.find_random_start_position();
                 self.uncover(last_action_tile.0, last_action_tile.1);
 
                 // Calculate size of visible area from action.visible_{top,bottom,left,right} fields
@@ -154,16 +104,6 @@ impl GameState {
                 let visible_right = last_action_tile.0 + visible_width / 2;
                 let visible_top = last_action_tile.1 - visible_height / 2;
                 let visible_bottom = last_action_tile.1 + visible_height / 2;
-                // Filter tiles within the visible bounds for the joining player,
-                // and make sure to only return uncovered tiles
-                let visible_tiles = self.board.values()
-                    .filter(|tile| {
-                        tile.x >= visible_left && tile.x <= visible_right &&
-                            tile.y >= visible_top && tile.y <= visible_bottom &&
-                            tile.uncovered > 0
-                    })
-                    .cloned()
-                    .collect();
 
                 return GameStateResponse {
                     update_top: visible_top,
@@ -172,42 +112,31 @@ impl GameState {
                     update_right: visible_right,
                     last_action_x: last_action_tile.0,
                     last_action_y: last_action_tile.1,
-                    tiles: visible_tiles,
+                    tiles: self.visible_tiles(visible_top, visible_bottom, visible_left, visible_right),
                     players: self.players.values().cloned().collect(),
                 };
             }
             "uncover" => {
-                if let Some(tile) = self.board.get_mut(&(action.x, action.y)) {
-                    match (self.playing, tile.uncovered, tile.is_mine) {
-                        (true, 0, true) => {
-                            // Game over
-                            tile.uncovered = seconds_since(self.epoch);
-                            self.playing = false;
-                        }
-                        (true, 0, false) => {
-                            tile.uncovered = seconds_since(self.epoch);
-                            if let Some(player) = self.players.get_mut(&action.player_id) {
-                                player.score += 1;
-                            }
-                        }
-                        _ => {}
+                match (self.player_id,
+                       self.board.get_mut(&(action.x, action.y)),
+                       is_mine(self.epoch, action.x, action.y, MINE_PROBABILITY)) {
+                    (0, _, _) => {}  // not yet playing or game over
+                    (_, None, true) => {
+                        self.uncover(action.x, action.y);
+                        self.player_id = 0;  // Game over
                     }
+                    (_, None, false) => {
+                        self.uncover(action.x, action.y);
+                        if let Some(player) = self.players.get_mut(&action.player_id) {
+                            player.score += 1;
+                        }
+                    }
+                    _ => {}  // already uncovered
                 }
                 last_action_tile = (action.x, action.y);
             }
             _ => {}
         }
-
-        // Filter tiles within the visible bounds for the joining player,
-        // and make sure to only return uncovered tiles
-        let visible_tiles = self.board.values()
-            .filter(|tile| {
-                tile.x >= action.visible_left && tile.x <= action.visible_right &&
-                    tile.y >= action.visible_top && tile.y <= action.visible_bottom &&
-                    tile.uncovered > 0
-            })
-            .cloned()
-            .collect();
 
         GameStateResponse {
             update_top: action.visible_top,
@@ -216,28 +145,143 @@ impl GameState {
             update_right: action.visible_right,
             last_action_x: last_action_tile.0,
             last_action_y: last_action_tile.1,
-            tiles: visible_tiles,
+            tiles: self.visible_tiles(action.visible_top, action.visible_bottom, action.visible_left, action.visible_right),
             players: self.players.values().cloned().collect(),
         }
     }
 
-    pub fn uncover(&mut self, x: i64, y: i64) {
-        if let Some(tile) = self.board.get_mut(&(x, y)) {
-            if tile.uncovered > 0 {
-                return;
+    pub fn visible_tiles(&self, visible_top: i64, visible_bottom: i64, visible_left: i64, visible_right: i64) -> Vec<ClientTile> {
+        self.board.iter().filter_map(|(&(x, y), db_tile)| {
+            if x >= visible_left && x <= visible_right &&
+                y >= visible_top && y <= visible_bottom {
+                Some(ClientTile {
+                    x,
+                    y,
+                    player_id: db_tile.player_id,
+                    adjacent_mines: self.adjacent_mines(x, y),
+                    is_mine: self.is_mine(x, y),
+                })
+            } else {
+                None
             }
-            let current_time = seconds_since(self.epoch);
-            tile.uncovered = current_time;
-            self.uncover_history.push_back(((x, y), current_time));
-            // Remove items older than 10 minutes (600 seconds) unless the list is shorter than 100 items
-            while let Some((_, timestamp)) = self.uncover_history.front() {
-                if current_time - timestamp > 600 && self.uncover_history.len() > 100 {
-                    self.uncover_history.pop_front();
-                } else {
-                    break;
-                }
+        }).collect()
+    }
+
+    pub fn uncover(&mut self, x: i64, y: i64) {
+        if self.board.contains_key(&(x, y)) { return; }  // already uncovered
+        let current_time = seconds_since(self.epoch);
+        self.board.insert((x, y), DbTile {
+            player_id: self.player_id,
+            uncovered: current_time,
+        });
+        println!("There were {} recent tiles, pushing ({}, {})", self.uncover_history.len(), x, y);
+        self.uncover_history.push_back((x, y));
+        println!("There are now {} recent tiles", self.uncover_history.len());
+        // Remove items older than 10 minutes (600 seconds) unless the list is shorter than 100 items
+        while let Some(x_y) = self.uncover_history.front() {
+            let timestamp = self.board.get(x_y).unwrap().uncovered;
+            if current_time - timestamp > 600 && self.uncover_history.len() > 100 {
+                println!("Purging old tile from {}, now is {}", timestamp, current_time);
+                self.uncover_history.pop_front();
+                println!("There are now {} recent tiles", self.uncover_history.len());
+            } else {
+                break;
             }
         }
     }
+
+    // Add a function to find a random starting position for a player
+    // that is not a mine and has no adjacent mines
+    // and at 10 tiles away from the nearest uncovered tile.
+    // Pick a random recently uncovered tile, and walk in a random direction until a tile fulfilling
+    // the criteria is found.
+    pub fn find_random_start_position(&self) -> (i64, i64) {
+        // Pick a random recently uncovered tile
+        let mut rng = rand::thread_rng();
+        println!("There are {} recent tiles", self.uncover_history.len());
+        let (x, y) = if self.uncover_history.is_empty() {
+            (0, 0)
+        } else {
+            let random_index = rng.gen_range(0..self.uncover_history.len());
+            self.uncover_history.iter().nth(random_index).unwrap().clone()
+        };
+        println!("Picked tile ({}, {})", x, y);
+        // Pick a random angle and use a line drawing algorithm to walk in that direction until a
+        // suitable tile is found.
+        let angle = rng.gen_range(0.0..std::f64::consts::PI * 2.0);
+        println!("Picked angle {}", angle);
+        for (dx, dy) in bresenham_line_towards_angle(angle) {
+            println!("Checking tile ({}, {})", x + dx, y + dy);
+            if !self.is_mine(x + dx, y + dy) && self.adjacent_mines(x + dx, y + dy) == 0 {
+                return (x + dx, y + dy);
+            }
+        }
+        (0, 0)
+    }
+
+    pub fn is_mine(&self, x: i64, y: i64) -> bool {
+        is_mine(self.epoch, x, y, MINE_PROBABILITY)
+    }
+
+    pub fn adjacent_mines(&self, x: i64, y: i64) -> i8 {
+        let mut count = 0;
+        for dx in -1..=1 {
+            for dy in -1..=1 {
+                if self.is_mine(x + dx, y + dy) {
+                    count += 1;
+                }
+            }
+        }
+        count
+    }
 }
 
+fn bresenham_line_towards_angle(angle: f64) -> impl Iterator<Item=(i64, i64)> {
+    let dx = (angle.cos() * 10000.0).round() as i32;
+    let dy = (angle.sin() * 10000.0).round() as i32;
+    let mut x = 0;
+    let mut y = 0;
+    let dx_abs = dx.abs();
+    let dy_abs = dy.abs();
+    let x_step = if dx > 0 { 1 } else { -1 };
+    let y_step = if dy > 0 { 1 } else { -1 };
+    let mut error = 0i32;
+    let primary_delta = dx_abs.max(dy_abs);
+    let secondary_delta = dx_abs.min(dy_abs);
+    let primary_is_x = dx_abs > dy_abs;
+
+    std::iter::from_fn(move || {
+        let result = Some((x, y));
+        if primary_is_x {
+            x += x_step;
+            error += secondary_delta;
+            if 2 * error >= primary_delta {
+                y += y_step;
+                error -= primary_delta;
+            }
+        } else {
+            y += y_step;
+            error += secondary_delta;
+            if 2 * error >= primary_delta {
+                x += x_step;
+                error -= primary_delta;
+            }
+        }
+        result
+    })
+}
+
+
+fn is_mine(seed: u32, x: i64, y: i64, probability: f64) -> bool {
+    // Step 1: Combine `x`, `y`, and `s` into a single hash value
+    let mut hasher = DefaultHasher::new();
+    (seed, x, y).hash(&mut hasher);
+    let hash_value = hasher.finish();
+
+    // Step 2: Convert the hash value to a pseudo-random number in [0, 1)
+    // Here, we use the maximum value of u64 as a normalization factor
+    let random_value = (hash_value as f64) / (u64::MAX as f64);
+
+    // Step 3: Compare the pseudo-random number with `p`
+    random_value < probability
+}

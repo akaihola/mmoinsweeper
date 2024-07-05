@@ -18,7 +18,7 @@ async fn main() {
     let addr = "127.0.0.1:8080";
     let listener = TcpListener::bind(&addr).await.expect("Failed to bind");
 
-    let game_state = Arc::new(Mutex::new(GameState::new(1000, 1000)));
+    let game_state = Arc::new(Mutex::new(GameState::new()));
 
     while let Ok((stream, _)) = listener.accept().await {
         let game_state = game_state.clone();
