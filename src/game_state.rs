@@ -27,6 +27,8 @@ pub struct ClientTile {
 
 #[derive(Clone)]
 pub struct DbPlayer {
+    pub token: String,
+    pub game_over: bool,
     pub color: String,
     pub score: u32,
 }
@@ -40,6 +42,7 @@ pub struct ClientPlayer {
 #[derive(Serialize, Deserialize)]
 pub struct PlayerAction {
     pub player_id: u32,
+    pub token: String,
     pub action_type: String,
     pub position: (i64, i64),
     pub visible_area: (i64, i64, i64, i64),
@@ -47,6 +50,8 @@ pub struct PlayerAction {
 
 #[derive(Serialize, Deserialize)]
 pub struct GameStateResponse {
+    pub player_id: u32,
+    pub token: String,
     pub update_area: (i64, i64, i64, i64),
     pub last_action_position: (i64, i64),
     pub tiles: Vec<ClientTile>,
@@ -58,7 +63,6 @@ pub struct GameState {
     pub board: HashMap<(i64, i64), DbTile>,
     pub players: HashMap<u32, DbPlayer>,
     pub next_player_id: u32,
-    pub player_id: u32,  // zero = not yet playing or game over
     uncover_history: VecDeque<(i64, i64)>,  // (x, y)
 }
 
@@ -72,20 +76,21 @@ impl GameState {
             board,
             players: HashMap::new(),
             next_player_id: 1,
-            player_id: 0,  // not yet playing
             uncover_history: VecDeque::new(),
         }
     }
 
     pub fn handle_join_action(&mut self, action: PlayerAction) -> GameStateResponse {
-        self.player_id = self.next_player_id;  // non-zero = playing
+        let player_id = self.next_player_id;  // non-zero = playing
         self.next_player_id += 1;
-        self.players.insert(self.player_id, DbPlayer {
+        self.players.insert(player_id, DbPlayer {
+            token: uuid::Uuid::new_v4().to_string(),
             color: format!("#{:06x}", rand::thread_rng().gen_range(0..0xFFFFFF)),
             score: 0,
+            game_over: false,
         });
         let start_position = self.find_random_start_position();
-        self.uncover(start_position);
+        self.uncover(start_position, player_id);
 
         // Calculate size of visible area from action.visible_{top,bottom,left,right} fields
         // and set the visible area to be centered around the starting tile.
@@ -99,6 +104,8 @@ impl GameState {
         );
 
         GameStateResponse {
+            player_id: player_id,
+            token: self.players[&player_id].token.clone(),
             update_area: visible_area,
             last_action_position: start_position,
             tiles: self.visible_tiles(visible_area),
@@ -108,6 +115,8 @@ impl GameState {
 
     pub fn handle_update_action(&mut self, action: PlayerAction) -> GameStateResponse {
         GameStateResponse {
+            player_id: action.player_id,
+            token: self.players[&action.player_id].token.clone(),  // security problem!
             update_area: action.visible_area,
             last_action_position: action.position,
             tiles: self.visible_tiles(action.visible_area),
@@ -116,21 +125,25 @@ impl GameState {
     }
 
     pub fn handle_uncover_action(&mut self, action: PlayerAction) -> GameStateResponse {
-        if self.player_id > 0 && !self.is_uncovered(action.position) && self.touches_own_area(action.position) {
+        if self.player_valid_and_playing(action.player_id, action.token)
+            && !self.is_uncovered(action.position)
+            && self.touches_own_area(action.position, action.player_id) {
             // game started, not yet game over, and tile not yet uncovered
             // so the player can and is allowed to uncover the tile
-            self.uncover(action.position);
-            if is_mine(self.epoch, action.position, MINE_PROBABILITY) {
-                // game over
-                self.player_id = 0;
-            } else {
-                // increment score of player who uncovered the tile
-                if let Some(player) = self.players.get_mut(&action.player_id) {
+            self.uncover(action.position, action.player_id);
+            if let Some(player) = self.players.get_mut(&action.player_id) {
+                if is_mine(self.epoch, action.position, MINE_PROBABILITY) {
+                    // game over
+                    player.game_over = true;
+                } else {
+                    // increment score of player who uncovered the tile
                     player.score += 1;
                 }
             }
         }
         GameStateResponse {
+            player_id: action.player_id,
+            token: self.players[&action.player_id].token.clone(),
             update_area: action.visible_area,
             last_action_position: action.position,
             tiles: self.visible_tiles(action.visible_area),
@@ -146,12 +159,22 @@ impl GameState {
             _ => {
                 println!("Unknown action type: {}", action.action_type);
                 GameStateResponse {
+                    player_id: action.player_id,
+                    token: self.players[&action.player_id].token.clone(),  // security problem!
                     update_area: action.visible_area,
                     last_action_position: (0, 0),
                     tiles: self.visible_tiles(action.visible_area),
                     players: self.players_response(),
                 }
             }
+        }
+    }
+
+    pub fn player_valid_and_playing(&self, player_id: u32, token: String) -> bool {
+        if let Some(player) = self.players.get(&player_id) {
+            player.token == token && !player.game_over
+        } else {
+            false
         }
     }
 
@@ -179,11 +202,11 @@ impl GameState {
         }).collect()
     }
 
-    pub fn uncover(&mut self, position: (i64, i64)) {
+    pub fn uncover(&mut self, position: (i64, i64), player_id: u32) {
         if self.is_uncovered(position) { return; }
         let current_time = seconds_since(self.epoch);
         self.board.insert(position, DbTile {
-            player_id: self.player_id,
+            player_id,
             uncovered: current_time,
         });
         println!("There were {} recent tiles, pushing ({}, {})", self.uncover_history.len(), position.0, position.1);
@@ -245,11 +268,10 @@ impl GameState {
         is_mine(self.epoch, position, MINE_PROBABILITY)
     }
 
-    pub fn touches_own_area(&self, position: (i64, i64)) -> bool {
-        if self.player_id == 0 { return false; }
+    pub fn touches_own_area(&self, position: (i64, i64), player_id: u32) -> bool {
         for adjacent_position in tiles_around(position) {
             if let Some(tile) = self.board.get(&adjacent_position) {
-                if tile.player_id == self.player_id {
+                if tile.player_id == player_id {
                     return true;
                 }
             }

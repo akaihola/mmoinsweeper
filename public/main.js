@@ -42,7 +42,8 @@ function handleMove(event) {
         lastPosX = event.clientX;
         lastPosY = event.clientY;
         safeSend(ws, JSON.stringify({
-            player_id: 1,
+            player_id: gameState.player_id,
+            token: gameState.token,
             action_type: 'update',
             position: getTileUnderMouse(),
             visible_area: getVisibleArea()
@@ -94,6 +95,7 @@ ws.onopen = () => {
 
     safeSend(ws, JSON.stringify({
         player_id: 0,
+        token: "",
         action_type: 'join',
         position: [0, 0],
         visible_area: [
@@ -133,7 +135,8 @@ function getTileUnderMouse() {
 function handle_click(event) {
     log('Click event registered, mouse position:', mouseX, mouseY, 'event:', event.type);
     safeSend(ws, JSON.stringify({
-        player_id: 1,
+        player_id: gameState.player_id,
+        token: gameState.token,
         action_type: 'uncover',
         position: getTileUnderMouse(),
         visible_area: getVisibleArea()
@@ -153,6 +156,8 @@ ws.onmessage = (event) => {
         gameState.view_bottom = TILE_SIZE * response.update_area[3];
     }
     gameState = {
+        player_id: response.player_id,
+        token: response.token,
         playing: true,
         tiles: response.tiles,
         players: response.players,
@@ -168,7 +173,12 @@ function renderGame() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     gameState.tiles.forEach(tile => {
         const [x, y] = tile.position;
-        ctx.fillStyle = tile.is_mine ? 'red' : gameState.players[tile.player_id].color;
+        const player = gameState.players[tile.player_id];
+        if (!player) {
+            console.error('Player not found:', tile.player_id, 'in players', gameState.players);
+            return;
+        }
+        ctx.fillStyle = tile.is_mine ? 'red' : player.color;
         ctx.fillRect(
             x * TILE_SIZE - gameState.view_left,
             y * TILE_SIZE - gameState.view_top,
