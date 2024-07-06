@@ -92,10 +92,8 @@ ws.onopen = () => {
     safeSend(ws, JSON.stringify({
         action_type: 'Join',
         visible_area: [
-            Math.floor(-horizontalTiles / 2),  // left
-            Math.ceil(-verticalTiles / 2),  // top
-            Math.floor(horizontalTiles / 2),  // right
-            Math.ceil(verticalTiles / 2)  // bottom
+            [Math.floor(-horizontalTiles / 2), Math.ceil(-verticalTiles / 2)],  // left, top
+            [Math.floor(horizontalTiles / 2), Math.ceil(verticalTiles / 2)]  // right, bottom
         ]
     }));
 };
@@ -111,10 +109,8 @@ ws.onerror = (error) => {
 
 function getVisibleArea() {
     return [
-        Math.floor(gameState.view_left / TILE_SIZE),
-        Math.floor(gameState.view_top / TILE_SIZE),
-        Math.ceil(gameState.view_right / TILE_SIZE),
-        Math.ceil(gameState.view_bottom / TILE_SIZE)
+        [Math.floor(gameState.view_left / TILE_SIZE), Math.floor(gameState.view_top / TILE_SIZE)],
+        [Math.ceil(gameState.view_right / TILE_SIZE), Math.ceil(gameState.view_bottom / TILE_SIZE)]
     ];
 }
 
@@ -167,10 +163,10 @@ function handleJoinResponse(response){
     gameState.playing = true;
     gameState.player_id = response.player_id;
     gameState.token = response.token;
-    gameState.view_left = TILE_SIZE * response.update_area[0];
-    gameState.view_top = TILE_SIZE * response.update_area[1];
-    gameState.view_right = TILE_SIZE * response.update_area[2];
-    gameState.view_bottom = TILE_SIZE * response.update_area[3];
+    gameState.view_left = TILE_SIZE * response.update_area[0][0];
+    gameState.view_top = TILE_SIZE * response.update_area[0][1];
+    gameState.view_right = TILE_SIZE * response.update_area[1][0];
+    gameState.view_bottom = TILE_SIZE * response.update_area[1][1];
 }
 
 function renderGame() {
