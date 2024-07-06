@@ -3,12 +3,17 @@ use std::sync::Arc;
 
 use futures_util::{SinkExt, StreamExt};
 use tokio::sync::Mutex;
-use warp::{Filter, fs::dir};
+use warp::{Filter, fs::dir, reply::with::header};
 use warp::ws::Message;
 
 use game_state::{GameState, PlayerAction};
 
+use crate::tls::show_hostnames;
+
 mod game_state;
+mod tls;
+
+const PORT: u16 = 3030;
 
 #[tokio::main]
 async fn main() {
@@ -24,9 +29,20 @@ async fn main() {
         .and_then(upgrade_ws);
 
     // Combine static files serving and WebSocket handling
-    let routes = static_files.or(websocket_route);
+    let routes = static_files.or(websocket_route)
+        .with(header("Cache-Control", "no-store"))
+        .with(header("Pragma", "no-cache"))
+        .with(header("Expires", "Sat, 01 Jan 2000 00:00:00 GMT"));
 
-    warp::serve(routes).run(([127, 0, 0, 1], 8080)).await;
+    show_hostnames(PORT);
+
+    // Serve with SSL
+    warp::serve(routes)
+        .tls()
+        .cert_path("cert.pem")
+        .key_path("key.pem")
+        .run(([0, 0, 0, 0], PORT))
+        .await;
 }
 
 async fn upgrade_ws(ws: warp::ws::Ws, game_state: Arc<Mutex<GameState>>) -> Result<impl warp::Reply, Infallible> {
