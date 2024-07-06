@@ -219,16 +219,12 @@ impl GameState {
             player_id,
             uncovered: current_time,
         });
-        println!("There were {} recent tiles, pushing ({}, {})", self.uncover_history.len(), position.0, position.1);
         self.uncover_history.push_back(position);
-        println!("There are now {} recent tiles", self.uncover_history.len());
         // Remove items older than 10 minutes (600 seconds) unless the list is shorter than 100 items
         while let Some(x_y) = self.uncover_history.front() {
             let timestamp = self.board.get(x_y).unwrap().uncovered;
             if current_time - timestamp > 600 && self.uncover_history.len() > 100 {
-                println!("Purging old tile from {}, now is {}", timestamp, current_time);
                 self.uncover_history.pop_front();
-                println!("There are now {} recent tiles", self.uncover_history.len());
             } else {
                 break;
             }
@@ -243,21 +239,17 @@ impl GameState {
     pub fn find_random_start_position(&self) -> Position {
         // Pick a random recently uncovered tile
         let mut rng = rand::thread_rng();
-        println!("There are {} recent tiles", self.uncover_history.len());
         let origin = if self.uncover_history.is_empty() {
             (0, 0)
         } else {
             let random_index = rng.gen_range(0..self.uncover_history.len());
             self.uncover_history.iter().nth(random_index).unwrap().clone()
         };
-        println!("Picked tile ({}, {})", origin.0, origin.1);
         // Pick a random angle and use a line drawing algorithm to walk in that direction until a
         // suitable tile is found.
         let angle = rng.gen_range(0.0..std::f64::consts::PI * 2.0);
-        println!("Picked angle {}", angle);
         let mut steps = 0;
         for position in bresenham_line_towards_angle(angle, origin) {
-            println!("Checking tile ({}, {})", position.0, position.1);
             if self.is_uncovered(position) {
                 steps = 0;
             } else {
