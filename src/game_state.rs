@@ -86,71 +86,83 @@ impl GameState {
         }
     }
 
-    pub fn process_action(&mut self, action: PlayerAction) -> GameStateResponse {
-        let mut last_action_tile = (0, 0);
-        match action.action_type.as_str() {
-            "join" => {
-                self.player_id = self.next_player_id;  // non-zero = playing
-                self.next_player_id += 1;
-                let color = format!("#{:06x}", rand::thread_rng().gen_range(0..0xFFFFFF));
-                self.players.insert(self.player_id, DbPlayer {
-                    color,
-                    score: 0,
-                });
-                last_action_tile = self.find_random_start_position();
-                self.uncover(last_action_tile.0, last_action_tile.1);
+    pub fn handle_join_action(&mut self, action: PlayerAction) -> GameStateResponse {
+        self.player_id = self.next_player_id;  // non-zero = playing
+        self.next_player_id += 1;
+        self.players.insert(self.player_id, DbPlayer {
+            color: format!("#{:06x}", rand::thread_rng().gen_range(0..0xFFFFFF)),
+            score: 0,
+        });
+        let start_position = self.find_random_start_position();
+        self.uncover(start_position.0, start_position.1);
 
-                // Calculate size of visible area from action.visible_{top,bottom,left,right} fields
-                // and set the visible area to be centered around the starting tile.
-                let visible_width = action.visible_right - action.visible_left + 1;
-                let visible_height = action.visible_bottom - action.visible_top + 1;
-                let visible_left = last_action_tile.0 - visible_width / 2;
-                let visible_right = last_action_tile.0 + visible_width / 2;
-                let visible_top = last_action_tile.1 - visible_height / 2;
-                let visible_bottom = last_action_tile.1 + visible_height / 2;
+        // Calculate size of visible area from action.visible_{top,bottom,left,right} fields
+        // and set the visible area to be centered around the starting tile.
+        let visible_width = action.visible_right - action.visible_left + 1;
+        let visible_height = action.visible_bottom - action.visible_top + 1;
+        let visible_left = start_position.0 - visible_width / 2;
+        let visible_right = start_position.0 + visible_width / 2;
+        let visible_top = start_position.1 - visible_height / 2;
+        let visible_bottom = start_position.1 + visible_height / 2;
 
-                return GameStateResponse {
-                    update_top: visible_top,
-                    update_bottom: visible_bottom,
-                    update_left: visible_left,
-                    update_right: visible_right,
-                    last_action_x: last_action_tile.0,
-                    last_action_y: last_action_tile.1,
-                    tiles: self.visible_tiles(visible_top, visible_bottom, visible_left, visible_right),
-                    players: self.players_response(),
-                };
-            }
-            "uncover" => {
-                match (self.player_id,
-                       self.board.get_mut(&(action.x, action.y)),
-                       is_mine(self.epoch, action.x, action.y, MINE_PROBABILITY)) {
-                    (0, _, _) => {}  // not yet playing or game over
-                    (_, None, true) => {
-                        self.uncover(action.x, action.y);
-                        self.player_id = 0;  // Game over
-                    }
-                    (_, None, false) => {
-                        self.uncover(action.x, action.y);
-                        if let Some(player) = self.players.get_mut(&action.player_id) {
-                            player.score += 1;
-                        }
-                    }
-                    _ => {}  // already uncovered
-                }
-                last_action_tile = (action.x, action.y);
-            }
-            _ => {}
+        GameStateResponse {
+            update_top: visible_top,
+            update_bottom: visible_bottom,
+            update_left: visible_left,
+            update_right: visible_right,
+            last_action_x: start_position.0,
+            last_action_y: start_position.1,
+            tiles: self.visible_tiles(visible_top, visible_bottom, visible_left, visible_right),
+            players: self.players_response(),
         }
+    }
 
+    pub fn handle_uncover_action(&mut self, action: PlayerAction) -> GameStateResponse {
+        match (self.player_id,
+               self.is_uncovered(action.x, action.y),
+               is_mine(self.epoch, action.x, action.y, MINE_PROBABILITY)) {
+            (0, _, _) => {}  // not yet playing or game over
+            (_, false, true) => {
+                self.uncover(action.x, action.y);
+                self.player_id = 0;  // Game over
+            }
+            (_, false, false) => {
+                self.uncover(action.x, action.y);
+                if let Some(player) = self.players.get_mut(&action.player_id) {
+                    player.score += 1;
+                }
+            }
+            _ => {}  // already uncovered
+        }
         GameStateResponse {
             update_top: action.visible_top,
             update_bottom: action.visible_bottom,
             update_left: action.visible_left,
             update_right: action.visible_right,
-            last_action_x: last_action_tile.0,
-            last_action_y: last_action_tile.1,
+            last_action_x: action.x,
+            last_action_y: action.y,
             tiles: self.visible_tiles(action.visible_top, action.visible_bottom, action.visible_left, action.visible_right),
             players: self.players_response(),
+        }
+    }
+
+    pub fn process_action(&mut self, action: PlayerAction) -> GameStateResponse {
+        match action.action_type.as_str() {
+            "join" => self.handle_join_action(action),
+            "uncover" => self.handle_uncover_action(action),
+            _ => {
+                println!("Unknown action type: {}", action.action_type);
+                GameStateResponse {
+                    update_top: action.visible_top,
+                    update_bottom: action.visible_bottom,
+                    update_left: action.visible_left,
+                    update_right: action.visible_right,
+                    last_action_x: 0,
+                    last_action_y: 0,
+                    tiles: self.visible_tiles(action.visible_top, action.visible_bottom, action.visible_left, action.visible_right),
+                    players: self.players_response(),
+                }
+            }
         }
     }
 
