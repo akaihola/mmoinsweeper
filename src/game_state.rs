@@ -107,7 +107,7 @@ impl GameState {
     }
 
     pub fn handle_uncover_action(&mut self, action: PlayerAction) -> GameStateResponse {
-        if self.player_id > 0 && !self.is_uncovered(action.position) {
+        if self.player_id > 0 && !self.is_uncovered(action.position) && self.touches_own_area(action.position) {
             // game started, not yet game over, and tile not yet uncovered
             // so the player can and is allowed to uncover the tile
             self.uncover(action.position);
@@ -235,17 +235,28 @@ impl GameState {
         is_mine(self.epoch, position, MINE_PROBABILITY)
     }
 
-    pub fn adjacent_mines(&self, position: (i64, i64)) -> i8 {
-        let mut count = 0;
-        for dx in -1..=1 {
-            for dy in -1..=1 {
-                if self.is_mine((position.0 + dx, position.1 + dy)) {
-                    count += 1;
+    pub fn touches_own_area(&self, position: (i64, i64)) -> bool {
+        if self.player_id == 0 { return false; }
+        for adjacent_position in tiles_around(position) {
+            if let Some(tile) = self.board.get(&adjacent_position) {
+                if tile.player_id == self.player_id {
+                    return true;
                 }
             }
         }
-        count
+        false
     }
+
+    pub fn adjacent_mines(&self, position: (i64, i64)) -> i8 {
+        tiles_around(position).filter(|&pos| self.is_mine(pos)).count() as i8
+    }
+}
+
+// iterate over all tiles around a position, but not the tile itself
+fn tiles_around(position: (i64, i64)) -> impl Iterator<Item=(i64, i64)> {
+    (-1..=1).flat_map(move |dx|
+    (-1..=1).map(move |dy| (position.0 + dx, position.1 + dy))
+    ).filter(move |&pos| pos != position)
 }
 
 fn bresenham_line_towards_angle(angle: f64, origin: (i64, i64)) -> impl Iterator<Item=(i64, i64)> {
