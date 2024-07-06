@@ -31,7 +31,7 @@ canvas.addEventListener('mousedown', (event) => {
     lastPosY = event.clientY;
 });
 
-function handleDrag(event) {
+function handleMove(event) {
     if (isDragging) {
         const deltaX = event.clientX - lastPosX;
         const deltaY = event.clientY - lastPosY;
@@ -41,6 +41,12 @@ function handleDrag(event) {
         gameState.view_bottom -= deltaY;
         lastPosX = event.clientX;
         lastPosY = event.clientY;
+        safeSend(ws, JSON.stringify({
+            player_id: 1,
+            action_type: 'update',
+            position: getTileUnderMouse(),
+            visible_area: getVisibleArea()
+        }));
         renderGame();
     } else {
         mouseX = event.clientX;
@@ -48,7 +54,7 @@ function handleDrag(event) {
     }
 }
 
-canvas.addEventListener('mousemove', handleDrag);
+canvas.addEventListener('mousemove', handleMove);
 
 canvas.addEventListener('mouseup', () => {
     isDragging = false;
@@ -62,7 +68,7 @@ canvas.addEventListener('touchstart', (event) => {
 }, {passive: true});
 
 canvas.addEventListener('touchmove', (event) => {
-    handleDrag(event.touches[0]);
+    handleMove(event.touches[0]);
 }, {passive: true});
 
 canvas.addEventListener('touchend', () => {
@@ -108,20 +114,29 @@ ws.onerror = (error) => {
     console.error('WebSocket error:', error);
 };
 
+function getVisibleArea() {
+    return [
+        Math.floor(gameState.view_left / TILE_SIZE),
+        Math.floor(gameState.view_top / TILE_SIZE),
+        Math.ceil(gameState.view_right / TILE_SIZE),
+        Math.ceil(gameState.view_bottom / TILE_SIZE)
+    ];
+}
+
+function getTileUnderMouse() {
+    return [
+        Math.floor((gameState.view_left + mouseX) / TILE_SIZE),
+        Math.floor((gameState.view_top + mouseY) / TILE_SIZE)
+    ]
+}
+
 function handle_click(event) {
-    log('Click event registered');
-    const x = Math.floor((gameState.view_left + mouseX) / TILE_SIZE);
-    const y = Math.floor((gameState.view_top + mouseY) / TILE_SIZE);
+    log('Click event registered, mouse position:', mouseX, mouseY, 'event:', event.type);
     safeSend(ws, JSON.stringify({
         player_id: 1,
         action_type: 'uncover',
-        position: [x, y],
-        visible_area: [
-            Math.floor(gameState.view_left / TILE_SIZE),
-            Math.floor(gameState.view_top / TILE_SIZE),
-            Math.ceil(gameState.view_right / TILE_SIZE),
-            Math.ceil(gameState.view_bottom / TILE_SIZE)
-        ]
+        position: getTileUnderMouse(),
+        visible_area: getVisibleArea()
     }));
 }
 

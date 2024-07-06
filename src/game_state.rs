@@ -106,6 +106,15 @@ impl GameState {
         }
     }
 
+    pub fn handle_update_action(&mut self, action: PlayerAction) -> GameStateResponse {
+        GameStateResponse {
+            update_area: action.visible_area,
+            last_action_position: action.position,
+            tiles: self.visible_tiles(action.visible_area),
+            players: self.players_response(),
+        }
+    }
+
     pub fn handle_uncover_action(&mut self, action: PlayerAction) -> GameStateResponse {
         if self.player_id > 0 && !self.is_uncovered(action.position) && self.touches_own_area(action.position) {
             // game started, not yet game over, and tile not yet uncovered
@@ -132,6 +141,7 @@ impl GameState {
     pub fn process_action(&mut self, action: PlayerAction) -> GameStateResponse {
         match action.action_type.as_str() {
             "join" => self.handle_join_action(action),
+            "update" => self.handle_update_action(action),
             "uncover" => self.handle_uncover_action(action),
             _ => {
                 println!("Unknown action type: {}", action.action_type);
