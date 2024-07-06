@@ -62,28 +62,18 @@ pub enum GameStateResponse {
         player_id: u32,
         token: String,
         update_area: (i64, i64, i64, i64),
-        last_action_position: (i64, i64),
         tiles: Vec<ClientTile>,
         players: HashMap<u32, ClientPlayer>,
     },
     Updated {
-        player_id: u32,
-        token: String,
-        update_area: (i64, i64, i64, i64),
-        last_action_position: (i64, i64),
         tiles: Vec<ClientTile>,
         players: HashMap<u32, ClientPlayer>,
     },
     Uncovered {
-        player_id: u32,
-        token: String,
-        update_area: (i64, i64, i64, i64),
-        last_action_position: (i64, i64),
         tiles: Vec<ClientTile>,
         players: HashMap<u32, ClientPlayer>,
     },
     Error {
-        player_id: u32,
         message: String,
     },
 }
@@ -137,7 +127,6 @@ impl GameState {
             player_id: player_id,
             token: self.players[&player_id].token.clone(),
             update_area: visible_area,
-            last_action_position: start_position,
             tiles: self.visible_tiles(visible_area),
             players: self.players_response(),
         }
@@ -145,10 +134,6 @@ impl GameState {
 
     pub fn handle_update_action(&self, area_to_update: (i64, i64, i64, i64)) -> GameStateResponse {
         GameStateResponse::Updated {
-            player_id: 0,
-            token: "".to_string(),
-            update_area: area_to_update,
-            last_action_position: (0, 0),
             tiles: self.visible_tiles(area_to_update),
             players: self.players_response(),
         }
@@ -172,10 +157,6 @@ impl GameState {
             }
         }
         GameStateResponse::Uncovered {
-            player_id: player_id,
-            token: self.players[&player_id].token.clone(),
-            update_area: visible_area,
-            last_action_position: position,
             tiles: self.visible_tiles(visible_area),
             players: self.players_response(),
         }

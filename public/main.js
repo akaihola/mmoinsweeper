@@ -145,25 +145,34 @@ ws.onmessage = (event) => {
     const parsedResponse = JSON.parse(event.data);
     const responseType = Object.keys(parsedResponse)[0];
     const response = parsedResponse[responseType];
-    if (!gameState.playing) {
-        gameState.view_left = TILE_SIZE * response.update_area[0];
-        gameState.view_top = TILE_SIZE * response.update_area[1];
-        gameState.view_right = TILE_SIZE * response.update_area[2];
-        gameState.view_bottom = TILE_SIZE * response.update_area[3];
+    gameState.tiles = response.tiles;
+    gameState.players = response.players;
+    switch (responseType) {
+        case 'Joined':
+            handleJoinResponse(response);
+            break;
+        case 'Updated':
+            break;
+        case 'Uncovered':
+            break;
+        case 'Error':
+            console.error('Error:', response.message);
+            break;
+        default:
+            console.error('Unknown response type:', responseType);
     }
-    gameState = {
-        player_id: response.player_id || gameState.player_id,
-        token: response.token || gameState.token,
-        playing: true,
-        tiles: response.tiles,
-        players: response.players,
-        view_top: gameState.view_top,
-        view_bottom: gameState.view_bottom,
-        view_left: gameState.view_left,
-        view_right: gameState.view_right
-    };
     renderGame();
-};
+}
+
+function handleJoinResponse(response){
+    gameState.playing = true;
+    gameState.player_id = response.player_id;
+    gameState.token = response.token;
+    gameState.view_left = TILE_SIZE * response.update_area[0];
+    gameState.view_top = TILE_SIZE * response.update_area[1];
+    gameState.view_right = TILE_SIZE * response.update_area[2];
+    gameState.view_bottom = TILE_SIZE * response.update_area[3];
+}
 
 function renderGame() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
