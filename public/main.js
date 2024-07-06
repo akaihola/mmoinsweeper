@@ -41,10 +41,12 @@ ws.onopen = () => {
         action_type: 'join',
         x: 0,
         y: 0,
-        visible_left: Math.floor(-horizontalTiles / 2),
-        visible_right: Math.floor(horizontalTiles / 2),
-        visible_top: Math.ceil(-verticalTiles / 2),
-        visible_bottom: Math.ceil(verticalTiles / 2),
+        visible_area: [
+            Math.floor(-horizontalTiles / 2),  // left
+            Math.ceil(-verticalTiles / 2),  // top
+            Math.floor(horizontalTiles / 2),  // right
+            Math.ceil(verticalTiles / 2)  // bottom
+        ]
     }));
 };
 
@@ -66,10 +68,12 @@ canvas.addEventListener('click', (event) => {
         action_type: 'uncover',
         x,
         y,
-        visible_left: Math.floor(gameState.view_left / TILE_SIZE),
-        visible_right: Math.ceil(gameState.view_right / TILE_SIZE),
-        visible_top: Math.floor(gameState.view_top / TILE_SIZE),
-        visible_bottom: Math.ceil(gameState.view_bottom / TILE_SIZE)
+        visible_area: [
+            Math.floor(gameState.view_left / TILE_SIZE),
+            Math.floor(gameState.view_top / TILE_SIZE),
+            Math.ceil(gameState.view_right / TILE_SIZE),
+            Math.ceil(gameState.view_bottom / TILE_SIZE)
+        ]
     }));
 });
 

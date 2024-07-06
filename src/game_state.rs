@@ -44,10 +44,7 @@ pub struct PlayerAction {
     pub action_type: String,
     pub x: i64,
     pub y: i64,
-    pub visible_top: i64,
-    pub visible_bottom: i64,
-    pub visible_left: i64,
-    pub visible_right: i64,
+    pub visible_area: (i64, i64, i64, i64),
 }
 
 #[derive(Serialize, Deserialize)]
@@ -95,18 +92,20 @@ impl GameState {
 
         // Calculate size of visible area from action.visible_{top,bottom,left,right} fields
         // and set the visible area to be centered around the starting tile.
-        let visible_width = action.visible_right - action.visible_left + 1;
-        let visible_height = action.visible_bottom - action.visible_top + 1;
-        let visible_left = start_position.0 - visible_width / 2;
-        let visible_right = start_position.0 + visible_width / 2;
-        let visible_top = start_position.1 - visible_height / 2;
-        let visible_bottom = start_position.1 + visible_height / 2;
+        let visible_width = action.visible_area.2 - action.visible_area.0 + 1;
+        let visible_height = action.visible_area.3 - action.visible_area.1 + 1;
+        let visible_area = (
+            start_position.0 - visible_width / 2,  // left
+            start_position.1 - visible_height / 2,  // top
+            start_position.0 + visible_width / 2, // right
+            start_position.1 + visible_height / 2, // bottom
+        );
 
         GameStateResponse {
-            update_area: (visible_left, visible_top, visible_right, visible_bottom),
+            update_area: visible_area,
             last_action_x: start_position.0,
             last_action_y: start_position.1,
-            tiles: self.visible_tiles(visible_left, visible_top, visible_right, visible_bottom),
+            tiles: self.visible_tiles(visible_area),
             players: self.players_response(),
         }
     }
@@ -129,10 +128,10 @@ impl GameState {
             _ => {}  // already uncovered
         }
         GameStateResponse {
-            update_area: (action.visible_left, action.visible_top, action.visible_right, action.visible_bottom),
+            update_area: action.visible_area,
             last_action_x: action.x,
             last_action_y: action.y,
-            tiles: self.visible_tiles(action.visible_left, action.visible_top, action.visible_right, action.visible_bottom),
+            tiles: self.visible_tiles(action.visible_area),
             players: self.players_response(),
         }
     }
@@ -144,10 +143,10 @@ impl GameState {
             _ => {
                 println!("Unknown action type: {}", action.action_type);
                 GameStateResponse {
-                    update_area: (action.visible_left, action.visible_top, action.visible_right, action.visible_bottom),
+                    update_area: action.visible_area,
                     last_action_x: 0,
                     last_action_y: 0,
-                    tiles: self.visible_tiles(action.visible_left, action.visible_top, action.visible_right, action.visible_bottom),
+                    tiles: self.visible_tiles(action.visible_area),
                     players: self.players_response(),
                 }
             }
@@ -163,10 +162,9 @@ impl GameState {
         }).collect()
     }
 
-    pub fn visible_tiles(&self, left: i64, top: i64, right: i64, bottom: i64) -> Vec<ClientTile> {
+    pub fn visible_tiles(&self, area: (i64, i64, i64, i64)) -> Vec<ClientTile> {
         self.board.iter().filter_map(|(&(x, y), db_tile)| {
-            if x >= left && x <= right &&
-                y >= top && y <= bottom {
+            if x >= area.0 && x <= area.2 && y >= area.1 && y <= area.3 {
                 Some(ClientTile {
                     x,
                     y,
