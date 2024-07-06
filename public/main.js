@@ -15,6 +15,9 @@ let gameState = {
     view_right: 0
 };
 
+let mouseX = 0;
+let mouseY = 0;
+
 function log(...args) {
     console.log(new Date().toISOString().substring(11, 23), ...args);
 }
@@ -58,10 +61,10 @@ ws.onerror = (error) => {
     console.error('WebSocket error:', error);
 };
 
-canvas.addEventListener('click', (event) => {
+function handle_click(event) {
     log('Click event registered');
-    const x = Math.floor((gameState.view_left + event.clientX) / TILE_SIZE);
-    const y = Math.floor((gameState.view_top + event.clientY) / TILE_SIZE);
+    const x = Math.floor((gameState.view_left + mouseX) / TILE_SIZE);
+    const y = Math.floor((gameState.view_top + mouseY) / TILE_SIZE);
     safeSend(ws, JSON.stringify({
         player_id: 1,
         action_type: 'uncover',
@@ -73,7 +76,14 @@ canvas.addEventListener('click', (event) => {
             Math.ceil(gameState.view_bottom / TILE_SIZE)
         ]
     }));
+}
+
+canvas.addEventListener('mousemove', (event) => {
+    mouseX = event.clientX;
+    mouseY = event.clientY;
 });
+canvas.addEventListener('click', handle_click);
+document.addEventListener('keyup', handle_click);
 
 ws.onmessage = (event) => {
     log('Message received from server', event.data.length, 'bytes', event.data);
