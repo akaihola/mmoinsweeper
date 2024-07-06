@@ -39,8 +39,7 @@ ws.onopen = () => {
     safeSend(ws, JSON.stringify({
         player_id: 0,
         action_type: 'join',
-        x: 0,
-        y: 0,
+        position: [0, 0],
         visible_area: [
             Math.floor(-horizontalTiles / 2),  // left
             Math.ceil(-verticalTiles / 2),  // top
@@ -66,8 +65,7 @@ canvas.addEventListener('click', (event) => {
     safeSend(ws, JSON.stringify({
         player_id: 1,
         action_type: 'uncover',
-        x,
-        y,
+        position: [x, y],
         visible_area: [
             Math.floor(gameState.view_left / TILE_SIZE),
             Math.floor(gameState.view_top / TILE_SIZE),
@@ -101,10 +99,11 @@ ws.onmessage = (event) => {
 function renderGame() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     gameState.tiles.forEach(tile => {
+        const [x, y] = tile.position;
         ctx.fillStyle = tile.is_mine ? 'red' : gameState.players[tile.player_id].color;
         ctx.fillRect(
-            tile.x * TILE_SIZE - gameState.view_left,
-            tile.y * TILE_SIZE - gameState.view_top,
+            x * TILE_SIZE - gameState.view_left,
+            y * TILE_SIZE - gameState.view_top,
             TILE_SIZE,
             TILE_SIZE
         );
@@ -112,8 +111,8 @@ function renderGame() {
             ctx.fillStyle = 'black';
             ctx.fillText(
                 tile.adjacent_mines,
-                tile.x * TILE_SIZE - gameState.view_left + TILE_SIZE / 4,
-                tile.y * TILE_SIZE - gameState.view_top + 3 * TILE_SIZE / 4
+                x * TILE_SIZE - gameState.view_left + TILE_SIZE / 4,
+                y * TILE_SIZE - gameState.view_top + 3 * TILE_SIZE / 4
             );
         }
     });

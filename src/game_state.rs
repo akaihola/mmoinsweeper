@@ -19,8 +19,7 @@ pub struct DbTile {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ClientTile {
-    pub x: i64,
-    pub y: i64,
+    pub position: (i64, i64),
     pub player_id: u32,
     pub adjacent_mines: i8,
     pub is_mine: bool,
@@ -42,16 +41,14 @@ pub struct ClientPlayer {
 pub struct PlayerAction {
     pub player_id: u32,
     pub action_type: String,
-    pub x: i64,
-    pub y: i64,
+    pub position: (i64, i64),
     pub visible_area: (i64, i64, i64, i64),
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct GameStateResponse {
     pub update_area: (i64, i64, i64, i64),
-    pub last_action_x: i64,
-    pub last_action_y: i64,
+    pub last_action_position: (i64, i64),
     pub tiles: Vec<ClientTile>,
     pub players: HashMap<u32, ClientPlayer>,
 }
@@ -88,7 +85,7 @@ impl GameState {
             score: 0,
         });
         let start_position = self.find_random_start_position();
-        self.uncover(start_position.0, start_position.1);
+        self.uncover(start_position);
 
         // Calculate size of visible area from action.visible_{top,bottom,left,right} fields
         // and set the visible area to be centered around the starting tile.
@@ -103,8 +100,7 @@ impl GameState {
 
         GameStateResponse {
             update_area: visible_area,
-            last_action_x: start_position.0,
-            last_action_y: start_position.1,
+            last_action_position: start_position,
             tiles: self.visible_tiles(visible_area),
             players: self.players_response(),
         }
@@ -112,15 +108,15 @@ impl GameState {
 
     pub fn handle_uncover_action(&mut self, action: PlayerAction) -> GameStateResponse {
         match (self.player_id,
-               self.is_uncovered(action.x, action.y),
-               is_mine(self.epoch, action.x, action.y, MINE_PROBABILITY)) {
+               self.is_uncovered(action.position),
+               is_mine(self.epoch, action.position, MINE_PROBABILITY)) {
             (0, _, _) => {}  // not yet playing or game over
             (_, false, true) => {
-                self.uncover(action.x, action.y);
+                self.uncover(action.position);
                 self.player_id = 0;  // Game over
             }
             (_, false, false) => {
-                self.uncover(action.x, action.y);
+                self.uncover(action.position);
                 if let Some(player) = self.players.get_mut(&action.player_id) {
                     player.score += 1;
                 }
@@ -129,8 +125,7 @@ impl GameState {
         }
         GameStateResponse {
             update_area: action.visible_area,
-            last_action_x: action.x,
-            last_action_y: action.y,
+            last_action_position: action.position,
             tiles: self.visible_tiles(action.visible_area),
             players: self.players_response(),
         }
@@ -144,8 +139,7 @@ impl GameState {
                 println!("Unknown action type: {}", action.action_type);
                 GameStateResponse {
                     update_area: action.visible_area,
-                    last_action_x: 0,
-                    last_action_y: 0,
+                    last_action_position: (0, 0),
                     tiles: self.visible_tiles(action.visible_area),
                     players: self.players_response(),
                 }
@@ -166,11 +160,10 @@ impl GameState {
         self.board.iter().filter_map(|(&(x, y), db_tile)| {
             if x >= area.0 && x <= area.2 && y >= area.1 && y <= area.3 {
                 Some(ClientTile {
-                    x,
-                    y,
+                    position: (x, y),
                     player_id: db_tile.player_id,
-                    adjacent_mines: self.adjacent_mines(x, y),
-                    is_mine: self.is_mine(x, y),
+                    adjacent_mines: self.adjacent_mines((x, y)),
+                    is_mine: self.is_mine((x, y)),
                 })
             } else {
                 None
@@ -178,15 +171,15 @@ impl GameState {
         }).collect()
     }
 
-    pub fn uncover(&mut self, x: i64, y: i64) {
-        if self.is_uncovered(x, y) { return; }
+    pub fn uncover(&mut self, position: (i64, i64)) {
+        if self.is_uncovered(position) { return; }
         let current_time = seconds_since(self.epoch);
-        self.board.insert((x, y), DbTile {
+        self.board.insert(position, DbTile {
             player_id: self.player_id,
             uncovered: current_time,
         });
-        println!("There were {} recent tiles, pushing ({}, {})", self.uncover_history.len(), x, y);
-        self.uncover_history.push_back((x, y));
+        println!("There were {} recent tiles, pushing ({}, {})", self.uncover_history.len(), position.0, position.1);
+        self.uncover_history.push_back(position);
         println!("There are now {} recent tiles", self.uncover_history.len());
         // Remove items older than 10 minutes (600 seconds) unless the list is shorter than 100 items
         while let Some(x_y) = self.uncover_history.front() {
@@ -210,45 +203,45 @@ impl GameState {
         // Pick a random recently uncovered tile
         let mut rng = rand::thread_rng();
         println!("There are {} recent tiles", self.uncover_history.len());
-        let (origin_x, origin_y) = if self.uncover_history.is_empty() {
+        let origin = if self.uncover_history.is_empty() {
             (0, 0)
         } else {
             let random_index = rng.gen_range(0..self.uncover_history.len());
             self.uncover_history.iter().nth(random_index).unwrap().clone()
         };
-        println!("Picked tile ({}, {})", origin_x, origin_y);
+        println!("Picked tile ({}, {})", origin.0, origin.1);
         // Pick a random angle and use a line drawing algorithm to walk in that direction until a
         // suitable tile is found.
         let angle = rng.gen_range(0.0..std::f64::consts::PI * 2.0);
         println!("Picked angle {}", angle);
         let mut steps = 0;
-        for (x, y) in bresenham_line_towards_angle(angle, origin_x, origin_y) {
-            println!("Checking tile ({}, {})", x, y);
-            if self.is_uncovered(x, y) {
+        for position in bresenham_line_towards_angle(angle, origin) {
+            println!("Checking tile ({}, {})", position.0, position.1);
+            if self.is_uncovered(position) {
                 steps = 0;
             } else {
                 steps += 1;
-                if steps > 5 && !self.is_mine(x, y) && self.adjacent_mines(x, y) == 0 {
-                    return (x, y);
+                if steps > 5 && !self.is_mine(position) && self.adjacent_mines(position) == 0 {
+                    return position;
                 }
             }
         }
         (0, 0)
     }
 
-    pub fn is_uncovered(&self, x: i64, y: i64) -> bool {
-        self.board.contains_key(&(x, y))
+    pub fn is_uncovered(&self, position: (i64, i64)) -> bool {
+        self.board.contains_key(&position)
     }
 
-    pub fn is_mine(&self, x: i64, y: i64) -> bool {
-        is_mine(self.epoch, x, y, MINE_PROBABILITY)
+    pub fn is_mine(&self, position: (i64, i64)) -> bool {
+        is_mine(self.epoch, position, MINE_PROBABILITY)
     }
 
-    pub fn adjacent_mines(&self, x: i64, y: i64) -> i8 {
+    pub fn adjacent_mines(&self, position: (i64, i64)) -> i8 {
         let mut count = 0;
         for dx in -1..=1 {
             for dy in -1..=1 {
-                if self.is_mine(x + dx, y + dy) {
+                if self.is_mine((position.0 + dx, position.1 + dy)) {
                     count += 1;
                 }
             }
@@ -257,11 +250,11 @@ impl GameState {
     }
 }
 
-fn bresenham_line_towards_angle(angle: f64, x0: i64, y0: i64) -> impl Iterator<Item=(i64, i64)> {
+fn bresenham_line_towards_angle(angle: f64, origin: (i64, i64)) -> impl Iterator<Item=(i64, i64)> {
     let dx = (angle.cos() * 10000.0).round() as i32;
     let dy = (angle.sin() * 10000.0).round() as i32;
-    let mut x = x0;
-    let mut y = y0;
+    let mut x = origin.0;
+    let mut y = origin.1;
     let dx_abs = dx.abs();
     let dy_abs = dy.abs();
     let x_step = if dx > 0 { 1 } else { -1 };
@@ -293,10 +286,10 @@ fn bresenham_line_towards_angle(angle: f64, x0: i64, y0: i64) -> impl Iterator<I
 }
 
 
-fn is_mine(seed: u32, x: i64, y: i64, probability: f64) -> bool {
+fn is_mine(seed: u32, position: (i64, i64), probability: f64) -> bool {
     // Step 1: Combine `x`, `y`, and `s` into a single hash value
     let mut hasher = DefaultHasher::new();
-    (seed, x, y).hash(&mut hasher);
+    (seed, position).hash(&mut hasher);
     let hash_value = hasher.finish();
 
     // Step 2: Convert the hash value to a pseudo-random number in [0, 1)
