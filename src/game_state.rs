@@ -106,7 +106,7 @@ impl GameState {
             update_area: (visible_left, visible_top, visible_right, visible_bottom),
             last_action_x: start_position.0,
             last_action_y: start_position.1,
-            tiles: self.visible_tiles(visible_top, visible_bottom, visible_left, visible_right),
+            tiles: self.visible_tiles(visible_left, visible_top, visible_right, visible_bottom),
             players: self.players_response(),
         }
     }
@@ -132,7 +132,7 @@ impl GameState {
             update_area: (action.visible_left, action.visible_top, action.visible_right, action.visible_bottom),
             last_action_x: action.x,
             last_action_y: action.y,
-            tiles: self.visible_tiles(action.visible_top, action.visible_bottom, action.visible_left, action.visible_right),
+            tiles: self.visible_tiles(action.visible_left, action.visible_top, action.visible_right, action.visible_bottom),
             players: self.players_response(),
         }
     }
@@ -147,7 +147,7 @@ impl GameState {
                     update_area: (action.visible_left, action.visible_top, action.visible_right, action.visible_bottom),
                     last_action_x: 0,
                     last_action_y: 0,
-                    tiles: self.visible_tiles(action.visible_top, action.visible_bottom, action.visible_left, action.visible_right),
+                    tiles: self.visible_tiles(action.visible_left, action.visible_top, action.visible_right, action.visible_bottom),
                     players: self.players_response(),
                 }
             }
@@ -163,7 +163,7 @@ impl GameState {
         }).collect()
     }
 
-    pub fn visible_tiles(&self, top: i64, bottom: i64, left: i64, right: i64) -> Vec<ClientTile> {
+    pub fn visible_tiles(&self, left: i64, top: i64, right: i64, bottom: i64) -> Vec<ClientTile> {
         self.board.iter().filter_map(|(&(x, y), db_tile)| {
             if x >= left && x <= right &&
                 y >= top && y <= bottom {
