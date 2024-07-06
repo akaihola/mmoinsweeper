@@ -85,7 +85,7 @@ function safeSend(ws, message) {
     }
 }
 
-ws.onopen = () => {
+ws.addEventListener('open', () => {
     const horizontalTiles = Math.floor(canvas.width / TILE_SIZE);
     const verticalTiles = Math.floor(canvas.height / TILE_SIZE);
 
@@ -96,16 +96,16 @@ ws.onopen = () => {
             [Math.floor(horizontalTiles / 2), Math.ceil(verticalTiles / 2)]  // right, bottom
         ]
     }));
-};
+});
 
 // Handle WebSocket closure and errors
-ws.onclose = (event) => {
+ws.addEventListener('close', (event) => {
     log('WebSocket closed:', event);
-};
+});
 
-ws.onerror = (error) => {
+ws.addEventListener('error', (error) => {
     console.error('WebSocket error:', error);
-};
+});
 
 function getVisibleArea() {
     return [
