@@ -107,21 +107,19 @@ impl GameState {
     }
 
     pub fn handle_uncover_action(&mut self, action: PlayerAction) -> GameStateResponse {
-        match (self.player_id,
-               self.is_uncovered(action.position),
-               is_mine(self.epoch, action.position, MINE_PROBABILITY)) {
-            (0, _, _) => {}  // not yet playing or game over
-            (_, false, true) => {
-                self.uncover(action.position);
-                self.player_id = 0;  // Game over
-            }
-            (_, false, false) => {
-                self.uncover(action.position);
+        if self.player_id > 0 && !self.is_uncovered(action.position) {
+            // game started, not yet game over, and tile not yet uncovered
+            // so the player can and is allowed to uncover the tile
+            self.uncover(action.position);
+            if is_mine(self.epoch, action.position, MINE_PROBABILITY) {
+                // game over
+                self.player_id = 0;
+            } else {
+                // increment score of player who uncovered the tile
                 if let Some(player) = self.players.get_mut(&action.player_id) {
                     player.score += 1;
                 }
             }
-            _ => {}  // already uncovered
         }
         GameStateResponse {
             update_area: action.visible_area,
