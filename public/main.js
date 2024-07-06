@@ -15,12 +15,59 @@ let gameState = {
     view_right: 0
 };
 
-let mouseX = 0;
-let mouseY = 0;
-
 function log(...args) {
     console.log(new Date().toISOString().substring(11, 23), ...args);
 }
+
+let mouseX = 0;
+let mouseY = 0;
+let isDragging = false;
+let lastPosX = 0;
+let lastPosY = 0;
+
+canvas.addEventListener('mousedown', (event) => {
+    isDragging = true;
+    lastPosX = event.clientX;
+    lastPosY = event.clientY;
+});
+
+function handleDrag(event) {
+    if (isDragging) {
+        const deltaX = event.clientX - lastPosX;
+        const deltaY = event.clientY - lastPosY;
+        gameState.view_left -= deltaX;
+        gameState.view_right -= deltaX;
+        gameState.view_top -= deltaY;
+        gameState.view_bottom -= deltaY;
+        lastPosX = event.clientX;
+        lastPosY = event.clientY;
+        renderGame();
+    } else {
+        mouseX = event.clientX;
+        mouseY = event.clientY;
+    }
+}
+
+canvas.addEventListener('mousemove', handleDrag);
+
+canvas.addEventListener('mouseup', () => {
+    isDragging = false;
+});
+
+canvas.addEventListener('touchstart', (event) => {
+    const touch = event.touches[0];
+    isDragging = true;
+    lastPosX = touch.clientX;
+    lastPosY = touch.clientY;
+}, {passive: true});
+
+canvas.addEventListener('touchmove', (event) => {
+    handleDrag(event.touches[0]);
+}, {passive: true});
+
+canvas.addEventListener('touchend', () => {
+    isDragging = false;
+});
 
 const ws = new WebSocket('ws://localhost:8080');
 
@@ -78,10 +125,6 @@ function handle_click(event) {
     }));
 }
 
-canvas.addEventListener('mousemove', (event) => {
-    mouseX = event.clientX;
-    mouseY = event.clientY;
-});
 canvas.addEventListener('click', handle_click);
 document.addEventListener('keyup', handle_click);
 
