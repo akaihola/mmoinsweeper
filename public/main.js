@@ -42,11 +42,8 @@ function handleMove(event) {
         lastPosX = event.clientX;
         lastPosY = event.clientY;
         safeSend(ws, JSON.stringify({
-            player_id: gameState.player_id,
-            token: gameState.token,
-            action_type: 'update',
-            position: getTileUnderMouse(),
-            visible_area: getVisibleArea()
+            action_type: 'Update',
+            area_to_update: getVisibleArea()
         }));
         renderGame();
     } else {
@@ -94,10 +91,7 @@ ws.onopen = () => {
     const verticalTiles = Math.floor(canvas.height / TILE_SIZE);
 
     safeSend(ws, JSON.stringify({
-        player_id: 0,
-        token: "",
-        action_type: 'join',
-        position: [0, 0],
+        action_type: 'Join',
         visible_area: [
             Math.floor(-horizontalTiles / 2),  // left
             Math.ceil(-verticalTiles / 2),  // top
@@ -135,9 +129,9 @@ function getTileUnderMouse() {
 function handle_click(event) {
     log('Click event registered, mouse position:', mouseX, mouseY, 'event:', event.type);
     safeSend(ws, JSON.stringify({
+        action_type: 'Uncover',
         player_id: gameState.player_id,
         token: gameState.token,
-        action_type: 'uncover',
         position: getTileUnderMouse(),
         visible_area: getVisibleArea()
     }));
@@ -148,7 +142,9 @@ document.addEventListener('keyup', handle_click);
 
 ws.onmessage = (event) => {
     log('Message received from server', event.data.length, 'bytes', event.data);
-    const response = JSON.parse(event.data);
+    const parsedResponse = JSON.parse(event.data);
+    const responseType = Object.keys(parsedResponse)[0];
+    const response = parsedResponse[responseType];
     if (!gameState.playing) {
         gameState.view_left = TILE_SIZE * response.update_area[0];
         gameState.view_top = TILE_SIZE * response.update_area[1];
@@ -156,8 +152,8 @@ ws.onmessage = (event) => {
         gameState.view_bottom = TILE_SIZE * response.update_area[3];
     }
     gameState = {
-        player_id: response.player_id,
-        token: response.token,
+        player_id: response.player_id || gameState.player_id,
+        token: response.token || gameState.token,
         playing: true,
         tiles: response.tiles,
         players: response.players,

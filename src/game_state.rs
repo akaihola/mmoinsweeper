@@ -40,22 +40,52 @@ pub struct ClientPlayer {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct PlayerAction {
-    pub player_id: u32,
-    pub token: String,
-    pub action_type: String,
-    pub position: (i64, i64),
-    pub visible_area: (i64, i64, i64, i64),
+#[serde(tag = "action_type")]
+pub enum PlayerAction {
+    Join {
+        visible_area: (i64, i64, i64, i64),
+    },
+    Update {
+        area_to_update: (i64, i64, i64, i64),
+    },
+    Uncover {
+        player_id: u32,
+        token: String,
+        position: (i64, i64),
+        visible_area: (i64, i64, i64, i64),
+    },
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct GameStateResponse {
-    pub player_id: u32,
-    pub token: String,
-    pub update_area: (i64, i64, i64, i64),
-    pub last_action_position: (i64, i64),
-    pub tiles: Vec<ClientTile>,
-    pub players: HashMap<u32, ClientPlayer>,
+pub enum GameStateResponse {
+    Joined {
+        player_id: u32,
+        token: String,
+        update_area: (i64, i64, i64, i64),
+        last_action_position: (i64, i64),
+        tiles: Vec<ClientTile>,
+        players: HashMap<u32, ClientPlayer>,
+    },
+    Updated {
+        player_id: u32,
+        token: String,
+        update_area: (i64, i64, i64, i64),
+        last_action_position: (i64, i64),
+        tiles: Vec<ClientTile>,
+        players: HashMap<u32, ClientPlayer>,
+    },
+    Uncovered {
+        player_id: u32,
+        token: String,
+        update_area: (i64, i64, i64, i64),
+        last_action_position: (i64, i64),
+        tiles: Vec<ClientTile>,
+        players: HashMap<u32, ClientPlayer>,
+    },
+    Error {
+        player_id: u32,
+        message: String,
+    },
 }
 
 pub struct GameState {
@@ -80,7 +110,7 @@ impl GameState {
         }
     }
 
-    pub fn handle_join_action(&mut self, action: PlayerAction) -> GameStateResponse {
+    pub fn handle_join_action(&mut self, visible_area: (i64, i64, i64, i64)) -> GameStateResponse {
         let player_id = self.next_player_id;  // non-zero = playing
         self.next_player_id += 1;
         self.players.insert(player_id, DbPlayer {
@@ -94,8 +124,8 @@ impl GameState {
 
         // Calculate size of visible area from action.visible_{top,bottom,left,right} fields
         // and set the visible area to be centered around the starting tile.
-        let visible_width = action.visible_area.2 - action.visible_area.0 + 1;
-        let visible_height = action.visible_area.3 - action.visible_area.1 + 1;
+        let visible_width = visible_area.2 - visible_area.0 + 1;
+        let visible_height = visible_area.3 - visible_area.1 + 1;
         let visible_area = (
             start_position.0 - visible_width / 2,  // left
             start_position.1 - visible_height / 2,  // top
@@ -103,7 +133,7 @@ impl GameState {
             start_position.1 + visible_height / 2, // bottom
         );
 
-        GameStateResponse {
+        GameStateResponse::Joined {
             player_id: player_id,
             token: self.players[&player_id].token.clone(),
             update_area: visible_area,
@@ -113,26 +143,26 @@ impl GameState {
         }
     }
 
-    pub fn handle_update_action(&mut self, action: PlayerAction) -> GameStateResponse {
-        GameStateResponse {
-            player_id: action.player_id,
-            token: self.players[&action.player_id].token.clone(),  // security problem!
-            update_area: action.visible_area,
-            last_action_position: action.position,
-            tiles: self.visible_tiles(action.visible_area),
+    pub fn handle_update_action(&self, area_to_update: (i64, i64, i64, i64)) -> GameStateResponse {
+        GameStateResponse::Updated {
+            player_id: 0,
+            token: "".to_string(),
+            update_area: area_to_update,
+            last_action_position: (0, 0),
+            tiles: self.visible_tiles(area_to_update),
             players: self.players_response(),
         }
     }
 
-    pub fn handle_uncover_action(&mut self, action: PlayerAction) -> GameStateResponse {
-        if self.player_valid_and_playing(action.player_id, action.token)
-            && !self.is_uncovered(action.position)
-            && self.touches_own_area(action.position, action.player_id) {
+    pub fn handle_uncover_action(&mut self, player_id: u32, token: String, position: (i64, i64), visible_area: (i64, i64, i64, i64)) -> GameStateResponse {
+        if self.player_valid_and_playing(player_id, token)
+            && !self.is_uncovered(position)
+            && self.touches_own_area(position, player_id) {
             // game started, not yet game over, and tile not yet uncovered
             // so the player can and is allowed to uncover the tile
-            self.uncover(action.position, action.player_id);
-            if let Some(player) = self.players.get_mut(&action.player_id) {
-                if is_mine(self.epoch, action.position, MINE_PROBABILITY) {
+            self.uncover(position, player_id);
+            if let Some(player) = self.players.get_mut(&player_id) {
+                if is_mine(self.epoch, position, MINE_PROBABILITY) {
                     // game over
                     player.game_over = true;
                 } else {
@@ -141,31 +171,22 @@ impl GameState {
                 }
             }
         }
-        GameStateResponse {
-            player_id: action.player_id,
-            token: self.players[&action.player_id].token.clone(),
-            update_area: action.visible_area,
-            last_action_position: action.position,
-            tiles: self.visible_tiles(action.visible_area),
+        GameStateResponse::Uncovered {
+            player_id: player_id,
+            token: self.players[&player_id].token.clone(),
+            update_area: visible_area,
+            last_action_position: position,
+            tiles: self.visible_tiles(visible_area),
             players: self.players_response(),
         }
     }
 
     pub fn process_action(&mut self, action: PlayerAction) -> GameStateResponse {
-        match action.action_type.as_str() {
-            "join" => self.handle_join_action(action),
-            "update" => self.handle_update_action(action),
-            "uncover" => self.handle_uncover_action(action),
-            _ => {
-                println!("Unknown action type: {}", action.action_type);
-                GameStateResponse {
-                    player_id: action.player_id,
-                    token: self.players[&action.player_id].token.clone(),  // security problem!
-                    update_area: action.visible_area,
-                    last_action_position: (0, 0),
-                    tiles: self.visible_tiles(action.visible_area),
-                    players: self.players_response(),
-                }
+        match action {
+            PlayerAction::Join { visible_area } => self.handle_join_action(visible_area),
+            PlayerAction::Update { area_to_update } => self.handle_update_action(area_to_update),
+            PlayerAction::Uncover { player_id, token, position, visible_area } => {
+                self.handle_uncover_action(player_id, token, position, visible_area)
             }
         }
     }
