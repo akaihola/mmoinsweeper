@@ -52,10 +52,7 @@ pub struct PlayerAction {
 
 #[derive(Serialize, Deserialize)]
 pub struct GameStateResponse {
-    pub update_top: i64,
-    pub update_bottom: i64,
-    pub update_left: i64,
-    pub update_right: i64,
+    pub update_area: (i64, i64, i64, i64),
     pub last_action_x: i64,
     pub last_action_y: i64,
     pub tiles: Vec<ClientTile>,
@@ -106,10 +103,7 @@ impl GameState {
         let visible_bottom = start_position.1 + visible_height / 2;
 
         GameStateResponse {
-            update_top: visible_top,
-            update_bottom: visible_bottom,
-            update_left: visible_left,
-            update_right: visible_right,
+            update_area: (visible_left, visible_top, visible_right, visible_bottom),
             last_action_x: start_position.0,
             last_action_y: start_position.1,
             tiles: self.visible_tiles(visible_top, visible_bottom, visible_left, visible_right),
@@ -135,10 +129,7 @@ impl GameState {
             _ => {}  // already uncovered
         }
         GameStateResponse {
-            update_top: action.visible_top,
-            update_bottom: action.visible_bottom,
-            update_left: action.visible_left,
-            update_right: action.visible_right,
+            update_area: (action.visible_left, action.visible_top, action.visible_right, action.visible_bottom),
             last_action_x: action.x,
             last_action_y: action.y,
             tiles: self.visible_tiles(action.visible_top, action.visible_bottom, action.visible_left, action.visible_right),
@@ -153,10 +144,7 @@ impl GameState {
             _ => {
                 println!("Unknown action type: {}", action.action_type);
                 GameStateResponse {
-                    update_top: action.visible_top,
-                    update_bottom: action.visible_bottom,
-                    update_left: action.visible_left,
-                    update_right: action.visible_right,
+                    update_area: (action.visible_left, action.visible_top, action.visible_right, action.visible_bottom),
                     last_action_x: 0,
                     last_action_y: 0,
                     tiles: self.visible_tiles(action.visible_top, action.visible_bottom, action.visible_left, action.visible_right),

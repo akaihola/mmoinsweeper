@@ -77,10 +77,10 @@ ws.onmessage = (event) => {
     log('Message received from server', event.data.length, 'bytes', event.data);
     const response = JSON.parse(event.data);
     if (!gameState.playing) {
-        gameState.view_top = TILE_SIZE * response.update_top;
-        gameState.view_bottom = TILE_SIZE * response.update_bottom;
-        gameState.view_left = TILE_SIZE * response.update_left;
-        gameState.view_right = TILE_SIZE * response.update_right;
+        gameState.view_left = TILE_SIZE * response.update_area[0];
+        gameState.view_top = TILE_SIZE * response.update_area[1];
+        gameState.view_right = TILE_SIZE * response.update_area[2];
+        gameState.view_bottom = TILE_SIZE * response.update_area[3];
     }
     gameState = {
         playing: true,
