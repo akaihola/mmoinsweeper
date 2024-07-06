@@ -73,12 +73,11 @@ canvas.addEventListener('touchend', () => {
     isDragging = false;
 });
 
-const ws = new WebSocket('ws://localhost:8080');
+const ws = new WebSocket('ws://localhost:8080/ws');
 
 // Check WebSocket connection state before sending a message
 function safeSend(ws, message) {
     if (ws.readyState === WebSocket.OPEN) {
-        log('Sending message to server', message);
         ws.send(message);
         log('Message sent to server', message);
     } else {

@@ -11,6 +11,7 @@ serde_json = "1.0"
 rand = "0.8"
 futures-util = "0.3.30"
 chrono = "0.4.38"
+warp = "0.3.7"
 
 [dependencies.uuid]
 version = "1.9.1"
