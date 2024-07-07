@@ -183,7 +183,12 @@ function handleJoinResponse(response) {
 }
 
 function renderGame(clear) {
-    if (clear) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (clear) {
+        const matrix = new DOMMatrix().translate(-gameState.view_left, -gameState.view_top)
+        coveredTilePattern.setTransform(matrix);
+        ctx.fillStyle = coveredTilePattern;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
     Object.entries(gameState.tiles).forEach(([position, tile]) => {
         const [x, y] = JSON.parse(`[${position}]`);
         const left = x * TILE_SIZE - gameState.view_left;
@@ -191,11 +196,15 @@ function renderGame(clear) {
         const top = y * TILE_SIZE - gameState.view_top;
         if (top + TILE_SIZE < 0 || top > canvas.height) return;
         const player = gameState.players[tile.player_id];
-        ctx.fillStyle = tile.is_mine ? 'red' : player ? player.color : 'black';
+        ctx.fillStyle = '#808080';
         ctx.fillRect(left, top, TILE_SIZE, TILE_SIZE);
+        ctx.fillStyle = tile.is_mine ? 'red' : player ? player.color : 'black';
+        ctx.fillRect(left + 1, top + 1, TILE_SIZE - 2, TILE_SIZE - 2);
         if (!tile.is_mine && tile.adjacent_mines > 0) {
             ctx.fillStyle = 'black';
-            ctx.fillText(tile.adjacent_mines, left + TILE_SIZE / 4, top + 3 * TILE_SIZE / 4);
+            ctx.textAlign = 'center';
+            ctx.font = `bold ${3 * TILE_SIZE / 4}px Impact`;
+            ctx.fillText(tile.adjacent_mines, left + TILE_SIZE / 2, top + 3 * TILE_SIZE / 4);
         }
     });
     Object.entries(gameState.players).forEach(([playerId, player]) => {
@@ -207,3 +216,19 @@ function renderGame(clear) {
         );
     });
 }
+
+const coveredTileCanvas = new OffscreenCanvas(TILE_SIZE, TILE_SIZE);
+const coveredTileCtx = coveredTileCanvas.getContext('2d');
+coveredTileCtx.fillStyle = '#ffffff';
+coveredTileCtx.fillRect(0, 0, TILE_SIZE, TILE_SIZE);
+coveredTileCtx.fillStyle = '#808080';
+coveredTileCtx.fillRect(2, 2, TILE_SIZE - 2, TILE_SIZE - 2);
+coveredTileCtx.fillStyle = '#c0c0c0';
+coveredTileCtx.fillRect(2, 2, TILE_SIZE - 4, TILE_SIZE - 4);
+coveredTileCtx.strokeStyle = '#c0c0c0';
+coveredTileCtx.lineWidth = 2.0;
+coveredTileCtx.beginPath();
+coveredTileCtx.moveTo(TILE_SIZE + 0.5, -0.5);
+coveredTileCtx.lineTo(-0.5, TILE_SIZE + 0.5);
+coveredTileCtx.stroke();
+const coveredTilePattern = ctx.createPattern(coveredTileCanvas, 'repeat');
