@@ -145,16 +145,17 @@ ws.onmessage = (event) => {
         console.log(positionString, tile);
         gameState.tiles[positionString] = tile;
     });
-    gameState.players = response.players;
     switch (responseType) {
         case 'Joined':
             handleJoinResponse(response);
+            updatePlayers(response);
             renderGame(true);
             break;
         case 'Updated':
             renderGame(true);
             break;
         case 'Uncovered':
+            updatePlayers(response);
             renderGame(false);
             break;
         case 'Error':
@@ -165,7 +166,13 @@ ws.onmessage = (event) => {
     }
 }
 
-function handleJoinResponse(response){
+function updatePlayers(response) {
+    Object.entries(response.players).forEach(([playerId, player]) => {
+        gameState.players[playerId] = player;
+    });
+}
+
+function handleJoinResponse(response) {
     gameState.playing = true;
     gameState.player_id = response.player_id;
     gameState.token = response.token;

@@ -75,7 +75,6 @@ pub enum GameStateResponse {
     },
     Updated {
         tiles: HashMap<PositionString, ClientTile>,
-        players: HashMap<u32, ClientPlayer>,
     },
     Uncovered {
         tiles: HashMap<PositionString, ClientTile>,
@@ -122,9 +121,10 @@ impl GameState {
 
     pub fn broadcast_tile(&self, position: Position) {
         // Broadcast the changed tile to all players who should see it
+        let tile = self.board.get(&position).unwrap();
         let response = GameStateResponse::Uncovered {
             tiles: self.visible_tiles((position, position)),
-            players: self.players_response(),
+            players: self.players_response(Some(tile.player_id)),
         };
         let message = serde_json::to_string(&response).unwrap();
         for (_, player) in &self.players {
@@ -154,9 +154,6 @@ impl GameState {
                 start_position.1 + visible_height / 2, // bottom
             ),
         );
-        self.uncover(start_position, player_id);
-        // Broadcast the opening tile to all players who should see it
-        self.broadcast_tile(start_position);
 
         self.players.insert(player_id, DbPlayer {
             token: uuid::Uuid::new_v4().to_string(),
@@ -167,19 +164,22 @@ impl GameState {
             visible_area,
         });
 
+        self.uncover(start_position, player_id);
+        // Broadcast the opening tile to all players who should see it
+        self.broadcast_tile(start_position);
+
         GameStateResponse::Joined {
             player_id: player_id,
             token: self.players[&player_id].token.clone(),
             update_area: visible_area,
             tiles: self.visible_tiles(visible_area),
-            players: self.players_response(),
+            players: self.players_response(None),
         }
     }
 
     pub fn handle_update_action(&self, area_to_update: Area) -> GameStateResponse {
         GameStateResponse::Updated {
             tiles: self.visible_tiles(area_to_update),
-            players: self.players_response(),
         }
     }
 
@@ -204,7 +204,7 @@ impl GameState {
         }
         GameStateResponse::Uncovered {
             tiles: self.visible_tiles(visible_area),
-            players: self.players_response(),
+            players: self.players_response(Some(player_id)),
         }
     }
 
@@ -226,12 +226,16 @@ impl GameState {
         }
     }
 
-    pub fn players_response(&self) -> HashMap<u32, ClientPlayer> {
-        self.players.iter().map(|(&id, player)| {
-            (id, ClientPlayer {
-                color: player.color.clone(),
-                score: player.score,
-            })
+    pub fn players_response(&self, player_id: Option<u32>) -> HashMap<u32, ClientPlayer> {
+        self.players.iter().filter_map(|(&id, player)| {
+            if player_id.map_or(true, |player_id| player_id == id) {
+                Some((id, ClientPlayer {
+                    color: player.color.clone(),
+                    score: player.score,
+                }))
+            } else {
+                None
+            }
         }).collect()
     }
 
