@@ -141,8 +141,9 @@ ws.onmessage = (event) => {
     const parsedResponse = JSON.parse(event.data);
     const responseType = Object.keys(parsedResponse)[0];
     const response = parsedResponse[responseType];
-    response.tiles.forEach(tile => {
-        gameState.tiles[JSON.stringify(tile.position)] = tile;
+    Object.entries(response.tiles).forEach(([positionString, tile]) => {
+        console.log(positionString, tile);
+        gameState.tiles[positionString] = tile;
     });
     gameState.players = response.players;
     switch (responseType) {
@@ -177,7 +178,7 @@ function handleJoinResponse(response){
 function renderGame(clear) {
     if (clear) ctx.clearRect(0, 0, canvas.width, canvas.height);
     Object.entries(gameState.tiles).forEach(([position, tile]) => {
-        const [x, y] = JSON.parse(position);
+        const [x, y] = JSON.parse(`[${position}]`);
         const left = x * TILE_SIZE - gameState.view_left;
         if (left + TILE_SIZE < 0 || left > canvas.width) return;
         const top = y * TILE_SIZE - gameState.view_top;

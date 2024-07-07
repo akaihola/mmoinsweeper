@@ -10,6 +10,7 @@ use warp::ws::Message;
 
 pub type TileCoordinate = i64;
 pub type Position = (TileCoordinate, TileCoordinate);
+pub type PositionString = String;
 pub type Area = (Position, Position);
 
 fn seconds_since(epoch: u32) -> u32 {
@@ -25,7 +26,6 @@ pub struct DbTile {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ClientTile {
-    pub position: Position,
     pub player_id: u32,
     pub adjacent_mines: i8,
     pub is_mine: bool,
@@ -70,15 +70,15 @@ pub enum GameStateResponse {
         player_id: u32,
         token: String,
         update_area: Area,
-        tiles: Vec<ClientTile>,
+        tiles: HashMap<PositionString, ClientTile>,
         players: HashMap<u32, ClientPlayer>,
     },
     Updated {
-        tiles: Vec<ClientTile>,
+        tiles: HashMap<PositionString, ClientTile>,
         players: HashMap<u32, ClientPlayer>,
     },
     Uncovered {
-        tiles: Vec<ClientTile>,
+        tiles: HashMap<PositionString, ClientTile>,
         players: HashMap<u32, ClientPlayer>,
     },
     Error {
@@ -235,15 +235,16 @@ impl GameState {
         }).collect()
     }
 
-    pub fn visible_tiles(&self, area: Area) -> Vec<ClientTile> {
+    pub fn visible_tiles(&self, area: Area) -> HashMap<PositionString, ClientTile> {
         self.board.iter().filter_map(|(&(x, y), db_tile)| {
             if x >= area.0.0 && x <= area.1.0 && y >= area.0.1 && y <= area.1.1 {
-                Some(ClientTile {
-                    position: (x, y),
+                let position_string = format!("{},{}", x, y);
+                let tile = ClientTile {
                     player_id: db_tile.player_id,
                     adjacent_mines: self.adjacent_mines((x, y)),
                     is_mine: self.is_mine((x, y)),
-                })
+                };
+                Some((position_string, tile))
             } else {
                 None
             }
