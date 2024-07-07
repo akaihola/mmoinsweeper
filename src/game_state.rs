@@ -5,6 +5,8 @@ use std::hash::{Hash, Hasher};
 use chrono::Utc;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
+use tokio::sync::mpsc;
+use warp::ws::Message;
 
 pub type TileCoordinate = i64;
 pub type Position = (TileCoordinate, TileCoordinate);
@@ -35,6 +37,8 @@ pub struct DbPlayer {
     pub game_over: bool,
     pub color: String,
     pub score: u32,
+    pub sender: Option<mpsc::UnboundedSender<Message>>,
+    pub visible_area: Area,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -43,7 +47,7 @@ pub struct ClientPlayer {
     pub score: u32,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(tag = "action_type")]
 pub enum PlayerAction {
     Join {
@@ -104,18 +108,33 @@ impl GameState {
         }
     }
 
+    pub fn set_player_sender(&mut self, player_id: u32, sender: mpsc::UnboundedSender<Message>) {
+        if let Some(player) = self.players.get_mut(&player_id) {
+            player.sender = Some(sender);
+        }
+    }
+
+    pub fn remove_player(&mut self, player_id: u32) {
+        if let Some(player) = self.players.get_mut(&player_id) {
+            player.sender = None;
+        }
+    }
+
+    pub fn broadcast_area_update(&self, area: Area, response: &GameStateResponse) {
+        let message = serde_json::to_string(&response).unwrap();
+        for (_, player) in &self.players {
+            if areas_intersect(area, player.visible_area) {
+                if let Some(sender) = &player.sender {
+                    let _ = sender.send(Message::text(message.to_string()));
+                }
+            }
+        }
+    }
+
     pub fn handle_join_action(&mut self, visible_area: Area) -> GameStateResponse {
         let player_id = self.next_player_id;  // non-zero = playing
         self.next_player_id += 1;
-        self.players.insert(player_id, DbPlayer {
-            token: uuid::Uuid::new_v4().to_string(),
-            color: format!("#{:06x}", rand::thread_rng().gen_range(0..0xFFFFFF)),
-            score: 0,
-            game_over: false,
-        });
         let start_position = self.find_random_start_position();
-        self.uncover(start_position, player_id);
-
         // Calculate size of visible area from action.visible_{top,bottom,left,right} fields
         // and set the visible area to be centered around the starting tile.
         let visible_width = visible_area.1.0 - visible_area.0.0 + 1;
@@ -130,6 +149,16 @@ impl GameState {
                 start_position.1 + visible_height / 2, // bottom
             ),
         );
+        self.uncover(start_position, player_id);
+
+        self.players.insert(player_id, DbPlayer {
+            token: uuid::Uuid::new_v4().to_string(),
+            color: format!("#{:06x}", rand::thread_rng().gen_range(0..0xFFFFFF)),
+            score: 0,
+            game_over: false,
+            sender: None,
+            visible_area,
+        });
 
         GameStateResponse::Joined {
             player_id: player_id,
@@ -163,6 +192,12 @@ impl GameState {
                     player.score += 1;
                 }
             }
+            // Broadcast the changed tile to all players who should see it
+            let broadcast_tile = GameStateResponse::Uncovered {
+                tiles: self.visible_tiles((position, position)),
+                players: self.players_response(),
+            };
+            self.broadcast_area_update((position, position), &broadcast_tile);
         }
         GameStateResponse::Uncovered {
             tiles: self.visible_tiles(visible_area),
@@ -341,4 +376,15 @@ fn is_mine(seed: u32, position: Position, probability: f64) -> bool {
 
     // Step 3: Compare the pseudo-random number with `p`
     random_value < probability
+}
+
+
+// Helper function to check if two areas intersect
+fn areas_intersect(area1: Area, area2: Area) -> bool {
+    let (left1, top1) = area1.0;
+    let (right1, bottom1) = area1.1;
+    let (left2, top2) = area2.0;
+    let (right2, bottom2) = area2.1;
+
+    left1 <= right2 && right1 >= left2 && top1 <= bottom2 && bottom1 >= top2
 }

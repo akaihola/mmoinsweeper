@@ -2,13 +2,15 @@ use std::convert::Infallible;
 use std::sync::Arc;
 
 use futures_util::{SinkExt, StreamExt};
-use tokio::sync::Mutex;
+use tokio::sync::{mpsc, Mutex};
 use warp::Filter;
 use warp::http::header::{CACHE_CONTROL, EXPIRES, HeaderMap, HeaderValue, PRAGMA};
 use warp::ws::Message;
 
 use game_state::{GameState, PlayerAction};
 use tls::show_hostnames;
+
+use crate::game_state::GameStateResponse;
 
 mod game_state;
 mod tls;
@@ -19,15 +21,43 @@ async fn upgrade_ws(ws: warp::ws::Ws, game_state: Arc<Mutex<GameState>>) -> Resu
 
 async fn handle_connection(ws: warp::ws::WebSocket, game_state: Arc<Mutex<GameState>>) {
     let (mut writer, mut reader) = ws.split();
+    let (tx, mut rx) = mpsc::unbounded_channel();
+
+    // Spawn a task to send messages to the client
+    tokio::spawn(async move {
+        while let Some(message) = rx.recv().await {
+            writer.send(message).await.unwrap();
+        }
+    });
+
+    let mut player_id = None;
+
+    // Process incoming messages
     while let Some(Ok(message)) = reader.next().await {
         if message.is_text() {
             if let Ok(text) = message.to_str() {
                 let action: PlayerAction = serde_json::from_str(text).unwrap();
-                let response = game_state.lock().await.process_action(action);
+                let mut game_state = game_state.lock().await;
+                let response = game_state.process_action(action.clone());
+
+                if player_id.is_none() {
+                    if let PlayerAction::Join { .. } = action {
+                        if let GameStateResponse::Joined { player_id: new_player_id, .. } = response {
+                            player_id = Some(new_player_id);
+                            game_state.set_player_sender(new_player_id, tx.clone());
+                        }
+                    }
+                }
+
                 let response_text = serde_json::to_string(&response).unwrap();
-                writer.send(Message::text(response_text)).await.unwrap();
+                tx.send(Message::text(response_text)).unwrap();
             }
         }
+    }
+
+    // Remove the player when the connection is closed
+    if let Some(id) = player_id {
+        game_state.lock().await.remove_player(id);
     }
 }
 
