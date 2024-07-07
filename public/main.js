@@ -45,7 +45,7 @@ function handleMove(event) {
             action_type: 'Update',
             area_to_update: getVisibleArea()
         }));
-        renderGame();
+        renderGame(true);
     } else {
         mouseX = event.clientX;
         mouseY = event.clientY;
@@ -148,10 +148,13 @@ ws.onmessage = (event) => {
     switch (responseType) {
         case 'Joined':
             handleJoinResponse(response);
+            renderGame(true);
             break;
         case 'Updated':
+            renderGame(true);
             break;
         case 'Uncovered':
+            renderGame(false);
             break;
         case 'Error':
             console.error('Error:', response.message);
@@ -159,7 +162,6 @@ ws.onmessage = (event) => {
         default:
             console.error('Unknown response type:', responseType);
     }
-    renderGame();
 }
 
 function handleJoinResponse(response){
