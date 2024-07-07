@@ -7,7 +7,7 @@ const TILE_SIZE = 20;
 
 let gameState = {
     playing: false,
-    tiles: [],
+    tiles: {},
     players: [],
     view_top: 0,
     view_bottom: 0,
@@ -141,7 +141,9 @@ ws.onmessage = (event) => {
     const parsedResponse = JSON.parse(event.data);
     const responseType = Object.keys(parsedResponse)[0];
     const response = parsedResponse[responseType];
-    gameState.tiles = response.tiles;
+    response.tiles.forEach(tile => {
+        gameState.tiles[JSON.stringify(tile.position)] = tile;
+    });
     gameState.players = response.players;
     switch (responseType) {
         case 'Joined':
@@ -170,29 +172,20 @@ function handleJoinResponse(response){
     gameState.view_bottom = TILE_SIZE * response.update_area[1][1];
 }
 
-function renderGame() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    gameState.tiles.forEach(tile => {
-        const [x, y] = tile.position;
+function renderGame(clear) {
+    if (clear) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    Object.entries(gameState.tiles).forEach(([position, tile]) => {
+        const [x, y] = JSON.parse(position);
+        const left = x * TILE_SIZE - gameState.view_left;
+        if (left + TILE_SIZE < 0 || left > canvas.width) return;
+        const top = y * TILE_SIZE - gameState.view_top;
+        if (top + TILE_SIZE < 0 || top > canvas.height) return;
         const player = gameState.players[tile.player_id];
-        if (!player) {
-            console.error('Player not found:', tile.player_id, 'in players', gameState.players);
-            return;
-        }
-        ctx.fillStyle = tile.is_mine ? 'red' : player.color;
-        ctx.fillRect(
-            x * TILE_SIZE - gameState.view_left,
-            y * TILE_SIZE - gameState.view_top,
-            TILE_SIZE,
-            TILE_SIZE
-        );
+        ctx.fillStyle = tile.is_mine ? 'red' : player ? player.color : 'black';
+        ctx.fillRect(left, top, TILE_SIZE, TILE_SIZE);
         if (!tile.is_mine && tile.adjacent_mines > 0) {
             ctx.fillStyle = 'black';
-            ctx.fillText(
-                tile.adjacent_mines,
-                x * TILE_SIZE - gameState.view_left + TILE_SIZE / 4,
-                y * TILE_SIZE - gameState.view_top + 3 * TILE_SIZE / 4
-            );
+            ctx.fillText(tile.adjacent_mines, left + TILE_SIZE / 4, top + 3 * TILE_SIZE / 4);
         }
     });
     Object.entries(gameState.players).forEach(([playerId, player]) => {
