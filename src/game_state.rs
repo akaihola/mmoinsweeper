@@ -120,10 +120,15 @@ impl GameState {
         }
     }
 
-    pub fn broadcast_area_update(&self, area: Area, response: &GameStateResponse) {
+    pub fn broadcast_tile(&self, position: Position) {
+        // Broadcast the changed tile to all players who should see it
+        let response = GameStateResponse::Uncovered {
+            tiles: self.visible_tiles((position, position)),
+            players: self.players_response(),
+        };
         let message = serde_json::to_string(&response).unwrap();
         for (_, player) in &self.players {
-            if areas_intersect(area, player.visible_area) {
+            if areas_intersect((position, position), player.visible_area) {
                 if let Some(sender) = &player.sender {
                     let _ = sender.send(Message::text(message.to_string()));
                 }
@@ -150,6 +155,8 @@ impl GameState {
             ),
         );
         self.uncover(start_position, player_id);
+        // Broadcast the opening tile to all players who should see it
+        self.broadcast_tile(start_position);
 
         self.players.insert(player_id, DbPlayer {
             token: uuid::Uuid::new_v4().to_string(),
@@ -193,11 +200,7 @@ impl GameState {
                 }
             }
             // Broadcast the changed tile to all players who should see it
-            let broadcast_tile = GameStateResponse::Uncovered {
-                tiles: self.visible_tiles((position, position)),
-                players: self.players_response(),
-            };
-            self.broadcast_area_update((position, position), &broadcast_tile);
+            self.broadcast_tile(position);
         }
         GameStateResponse::Uncovered {
             tiles: self.visible_tiles(visible_area),
