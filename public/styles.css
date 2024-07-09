@@ -22,3 +22,43 @@ body {
     border-radius: 5px;
     z-index: 10;
 }
+
+#leaderboard-container {
+    position: fixed;
+    top: 0;
+    left: -300px;
+    width: 300px;
+    background: rgba(255, 255, 255, 0.9);
+    border-right: 1px solid #000;
+    transition: left 0.3s ease;
+    z-index: 20;
+}
+
+#leaderboard-handle {
+    position: absolute;
+    top: 0;
+    right: -50px;
+    width: 50px;
+    height: 50px;
+    background: #000;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+#leaderboard {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#leaderboard th, #leaderboard td {
+    border: 1px solid #000;
+    padding: 5px;
+    text-align: left;
+}
+
+#leaderboard th {
+    cursor: pointer;
+}

@@ -1,19 +1,12 @@
+import { updateLeaderboard } from './leaderboard.mjs';
+import { gameState, getVisibleArea } from './game_state.mjs';
+import { TILE_SIZE} from "./defaults.mjs";
+
+
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
-
-const TILE_SIZE = 20;
-
-let gameState = {
-    playing: false,
-    tiles: {},
-    players: [],
-    view_top: 0,
-    view_bottom: 0,
-    view_left: 0,
-    view_right: 0
-};
 
 function log(...args) {
     console.log(new Date().toISOString().substring(11, 23), ...args);
@@ -108,13 +101,6 @@ ws.addEventListener('error', (error) => {
     console.error('WebSocket error:', error);
 });
 
-function getVisibleArea() {
-    return [
-        [Math.floor(gameState.view_left / TILE_SIZE), Math.floor(gameState.view_top / TILE_SIZE)],
-        [Math.ceil(gameState.view_right / TILE_SIZE), Math.ceil(gameState.view_bottom / TILE_SIZE)]
-    ];
-}
-
 function getTileUnderMouse() {
     return [
         Math.floor((gameState.view_left + mouseX) / TILE_SIZE),
@@ -137,10 +123,10 @@ canvas.addEventListener('click', handle_click);
 document.addEventListener('keyup', handle_click);
 
 ws.onmessage = (event) => {
-    log('Message received from server', event.data.length, 'bytes', event.data);
     const parsedResponse = JSON.parse(event.data);
     const responseType = Object.keys(parsedResponse)[0];
     const response = parsedResponse[responseType];
+    log('Message received from server', event.data.length, 'bytes', response);
     Object.entries(response.tiles).forEach(([positionString, tile]) => {
         console.log(positionString, tile);
         gameState.tiles[positionString] = tile;
@@ -170,6 +156,7 @@ function updatePlayers(response) {
     Object.entries(response.players).forEach(([playerId, player]) => {
         gameState.players[playerId] = player;
     });
+    updateLeaderboard();
 }
 
 function handleJoinResponse(response) {
@@ -196,6 +183,8 @@ function renderGame(clear) {
         const top = y * TILE_SIZE - gameState.view_top;
         if (top + TILE_SIZE < 0 || top > canvas.height) return;
         const player = gameState.players[tile.player_id];
+        // Sometimes the player is not found, this is for alerting the tester about it:
+        if (!player) alert('Player not found:', tile.player_id);
         ctx.fillStyle = '#808080';
         ctx.fillRect(left, top, TILE_SIZE, TILE_SIZE);
         ctx.fillStyle = tile.is_mine ? 'red' : player ? player.color : 'black';

@@ -10,7 +10,22 @@
     <canvas id="gameCanvas"></canvas>
     <div id="ui">
         <div id="score">Score: 0</div>
+        <div id="leaderboard-container">
+            <div id="leaderboard-handle">Leaderboard</div>
+            <table id="leaderboard">
+                <thead>
+                    <tr>
+                        <th id="rank-header">Rank</th>
+                        <th>Name</th>
+                        <th id="score-header">Score</th>
+                        <th>Time</th>
+                        <th id="tph-header">TPH</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
     </div>
-    <script src="main.js"></script>
+    <script src="main.mjs" type="module"></script>
 </body>
 </html>
