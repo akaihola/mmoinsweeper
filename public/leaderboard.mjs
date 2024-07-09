@@ -29,9 +29,22 @@ document.getElementById('tph-header').addEventListener('click', () => {
 });
 
 export function updateLeaderboard() {
+    const visiblePlayers = getVisiblePlayers(getSortedPlayers(sortBy));
+    leaderboardTable.innerHTML = '';
+    visiblePlayers.forEach((player, index) => {
+        const row = leaderboardTable.insertRow();
+        row.insertCell(0).innerText = index + 1; // Rank
+        row.insertCell(1).innerText = player.name; // Name
+        row.insertCell(2).innerText = player.score; // Score
+        row.insertCell(3).innerText = formatTime(player.join_time); // Time
+        row.insertCell(4).innerText = player.tph.toFixed(2); // TPH
+    });
+}
+
+function getSortedPlayers(sortBy) {
     const players = Object.values(gameState.players);
     players.forEach(player => {
-        player.tph = player.score / ((Date.now() - player.joinTime) / 3600000); // Calculate TPH
+        player.tph = player.score / ((new Date() - player.join_time) / 3600000); // Calculate TPH
     });
     players.sort((a, b) => {
         if (sortBy === 'score') {
@@ -40,17 +53,7 @@ export function updateLeaderboard() {
             return sortOrder === 'asc' ? a.tph - b.tph : b.tph - a.tph;
         }
     });
-
-    const visiblePlayers = getVisiblePlayers(players);
-    leaderboardTable.innerHTML = '';
-    visiblePlayers.forEach((player, index) => {
-        const row = leaderboardTable.insertRow();
-        row.insertCell(0).innerText = index + 1; // Rank
-        row.insertCell(1).innerText = player.name; // Name
-        row.insertCell(2).innerText = player.score; // Score
-        row.insertCell(3).innerText = formatTime(player.joinTime); // Time
-        row.insertCell(4).innerText = player.tph.toFixed(2); // TPH
-    });
+    return players;
 }
 
 function getVisiblePlayers(players) {
@@ -86,7 +89,7 @@ function isPlayerVisible(player, visibleArea) {
 }
 
 function formatTime(joinTime) {
-    const totalSeconds = Math.floor((Date.now() - joinTime) / 1000);
+    const totalSeconds = Math.floor((new Date() - joinTime) / 1000);
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;

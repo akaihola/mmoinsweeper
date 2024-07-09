@@ -12,15 +12,17 @@ pub type TileCoordinate = i64;
 pub type Position = (TileCoordinate, TileCoordinate);
 pub type PositionString = String;
 pub type Area = (Position, Position);
+pub type ServerTime = u32;
+pub type UnixSeconds = u32;
 
-fn seconds_since(epoch: u32) -> u32 {
+fn seconds_since(epoch: u32) -> ServerTime {
     Utc::now().timestamp() as u32 - epoch
 }
 
 const MINE_PROBABILITY: f64 = 0.2;
 
 pub struct DbTile {
-    pub uncovered: u32,  // seconds since beginning of game, zero = not uncovered
+    pub uncovered: ServerTime,  // seconds since beginning of game, zero = not uncovered
     pub player_id: u32,
 }
 
@@ -34,6 +36,7 @@ pub struct ClientTile {
 #[derive(Clone)]
 pub struct DbPlayer {
     pub token: String,
+    pub join_time: ServerTime,
     pub game_over: bool,
     pub color: String,
     pub score: u32,
@@ -43,6 +46,7 @@ pub struct DbPlayer {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ClientPlayer {
+    pub join_time: UnixSeconds,
     pub color: String,
     pub score: u32,
 }
@@ -156,6 +160,7 @@ impl GameState {
         );
 
         self.players.insert(player_id, DbPlayer {
+            join_time: seconds_since(self.epoch),
             token: uuid::Uuid::new_v4().to_string(),
             color: format!("#{:06x}", rand::thread_rng().gen_range(0..0xFFFFFF)),
             score: 0,
@@ -230,6 +235,7 @@ impl GameState {
         self.players.iter().filter_map(|(&id, player)| {
             if player_id.map_or(true, |player_id| player_id == id) {
                 Some((id, ClientPlayer {
+                    join_time: self.epoch + player.join_time,
                     color: player.color.clone(),
                     score: player.score,
                 }))

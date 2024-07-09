@@ -154,7 +154,11 @@ ws.onmessage = (event) => {
 
 function updatePlayers(response) {
     Object.entries(response.players).forEach(([playerId, player]) => {
-        gameState.players[playerId] = player;
+        gameState.players[playerId] = {
+            join_time: new Date(1000 * player.join_time),
+            color: player.color,
+            score: player.score
+        };
     });
     updateLeaderboard();
 }
@@ -195,14 +199,6 @@ function renderGame(clear) {
             ctx.font = `bold ${3 * TILE_SIZE / 4}px Impact`;
             ctx.fillText(tile.adjacent_mines, left + TILE_SIZE / 2, top + 3 * TILE_SIZE / 4);
         }
-    });
-    Object.entries(gameState.players).forEach(([playerId, player]) => {
-        ctx.fillStyle = player.color;
-        ctx.fillText(
-            `Player ${playerId}: ${player.score}`,
-            TILE_SIZE / 2,
-            TILE_SIZE * playerId
-        );
     });
 }
 
