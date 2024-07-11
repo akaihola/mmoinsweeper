@@ -37,6 +37,7 @@ body {
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    font-size: 24px;
 }
 
 #leaderboard {
