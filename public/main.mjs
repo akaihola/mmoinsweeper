@@ -194,7 +194,8 @@ function renderGame(clear) {
         ctx.fillStyle = tile.is_mine ? 'red' : player ? player.color : 'black';
         ctx.fillRect(left + 1, top + 1, TILE_SIZE - 2, TILE_SIZE - 2);
         if (!tile.is_mine && tile.adjacent_mines > 0) {
-            ctx.fillStyle = 'black';
+            const colors = ['blue', 'green', 'red', 'purple', 'maroon', 'turquoise', 'black', 'gray'];
+            ctx.fillStyle = colors[tile.adjacent_mines - 1] || 'black';
             ctx.textAlign = 'center';
             ctx.font = `bold ${3 * TILE_SIZE / 4}px Impact`;
             ctx.fillText(tile.adjacent_mines, left + TILE_SIZE / 2, top + 3 * TILE_SIZE / 4);
