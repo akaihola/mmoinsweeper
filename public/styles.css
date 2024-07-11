@@ -13,15 +13,6 @@ body {
     touch-action: none;
 }
 
-#ui {
-    position: fixed;
-    top: 10px;
-    left: 10px;
-    background: rgba(255, 255, 255, 0.8);
-    padding: 10px;
-    border-radius: 5px;
-    z-index: 10;
-}
 
 #leaderboard-container {
     position: fixed;
