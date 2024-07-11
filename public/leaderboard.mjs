@@ -55,7 +55,10 @@ export function updateLeaderboard() {
     visiblePlayers.forEach((player, index) => {
         const row = leaderboardTable.insertRow();
         row.insertCell(0).innerText = index + 1; // Rank
-        row.insertCell(1).innerText = player.name; // Name
+        const nameCell = row.insertCell(1);
+        nameCell.innerText = player.name; // Name
+        nameCell.style.backgroundColor = player.color;
+        nameCell.style.color = 'black';
         row.insertCell(2).innerText = player.score; // Score
         row.insertCell(3).innerText = formatTime(player.join_time); // Time
         row.insertCell(4).innerText = player.tph.toFixed(2); // TPH
