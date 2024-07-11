@@ -17,16 +17,13 @@ body {
 #leaderboard-container {
     position: fixed;
     top: 0;
-    left: -270px;
-    width: 270px;
+    left: -300px;
+    width: 300px;
     height: 100vh;
-    background: rgba(255, 255, 255, 0.9);
-    border-right: 1px solid #000;
     transition: left 0.3s ease;
     z-index: 999;
     overflow-y: auto;
     overflow-x: visible;
-    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
     font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
     font-size: 14px;
 }
@@ -87,16 +84,13 @@ body {
 }
 
 #leaderboard th, #leaderboard td {
-    min-width: 50px;
     max-width: 150px;
 }
 
 #leaderboard th#name-header, #leaderboard td:nth-child(2) {
-    min-width: 100px;
     max-width: 200px;
 }
 
 #leaderboard th#time-header, #leaderboard td:nth-child(4) {
-    min-width: 70px;
     max-width: 120px;
 }

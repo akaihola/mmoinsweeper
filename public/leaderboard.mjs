@@ -11,7 +11,7 @@ let sortOrder = 'asc'; // Default sorting order ascending
 // Ensure the handle is always visible
 function updateHandlePosition() {
     if (leaderboardContainer.style.left === '0px') {
-        leaderboardHandle.style.left = '270px';
+        leaderboardHandle.style.left = '300px';
     } else {
         leaderboardHandle.style.left = '0px';
     }
@@ -19,7 +19,7 @@ function updateHandlePosition() {
 
 leaderboardHandle.addEventListener('click', () => {
     if (leaderboardContainer.style.left === '0px') {
-        leaderboardContainer.style.left = '-270px';
+        leaderboardContainer.style.left = '-300px';
     } else {
         leaderboardContainer.style.left = '0px';
     }
@@ -27,7 +27,7 @@ leaderboardHandle.addEventListener('click', () => {
 });
 
 // Initialize the leaderboard position
-leaderboardContainer.style.left = '-270px';
+leaderboardContainer.style.left = '-300px';
 updateHandlePosition(); // Call this initially to set the correct position
 
 // Update handle position on window resize
