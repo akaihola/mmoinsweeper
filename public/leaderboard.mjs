@@ -93,5 +93,9 @@ function formatTime(joinTime) {
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
-    return `${hours}h ${minutes}m ${seconds}s`;
+    let timeString = '';
+    if (hours > 0) timeString += `${hours}h `;
+    if (hours > 0 || minutes > 0) timeString += `${minutes}m `;
+    timeString += `${seconds}s`;
+    return timeString.trim();
 }
