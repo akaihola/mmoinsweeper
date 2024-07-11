@@ -217,3 +217,9 @@ coveredTileCtx.moveTo(TILE_SIZE + 0.5, -0.5);
 coveredTileCtx.lineTo(-0.5, TILE_SIZE + 0.5);
 coveredTileCtx.stroke();
 const coveredTilePattern = ctx.createPattern(coveredTileCanvas, 'repeat');
+
+
+
+// FOR DEBUGGING:
+window.getVisibleArea = getVisibleArea;
+window.gameState = gameState;
