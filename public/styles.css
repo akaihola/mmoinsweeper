@@ -17,19 +17,23 @@ body {
 #leaderboard-container {
     position: fixed;
     top: 0;
-    left: -300px;
-    width: 300px;
+    left: -270px;
+    width: 270px;
+    height: 100vh;
     background: rgba(255, 255, 255, 0.9);
     border-right: 1px solid #000;
     transition: left 0.3s ease;
-    z-index: 20;
+    z-index: 999;
+    overflow-y: auto;
+    overflow-x: visible;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
 }
 
 #leaderboard-handle {
-    position: absolute;
-    top: 0;
-    right: -50px;
-    width: 50px;
+    position: fixed;
+    top: 10px;
+    left: 0;
+    width: 30px;
     height: 50px;
     background: #000;
     color: #fff;
@@ -38,11 +42,22 @@ body {
     justify-content: center;
     cursor: pointer;
     font-size: 24px;
+    border-radius: 0 5px 5px 0;
+    z-index: 1001;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.3);
+    transition: left 0.3s ease;
+}
+
+.table-wrapper {
+    overflow-x: auto;
+    width: 100%;
 }
 
 #leaderboard {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
+    table-layout: auto;
 }
 
 #leaderboard th, #leaderboard td {
@@ -50,8 +65,35 @@ body {
     padding: 5px;
     text-align: left;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    background-color: rgba(255, 255, 255, 0.9);
 }
 
 #leaderboard th {
     cursor: pointer;
+    background-color: #000;
+    color: #fff;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+#leaderboard tr:nth-child(even) td {
+    background-color: rgba(240, 240, 240, 0.9);
+}
+
+#leaderboard th, #leaderboard td {
+    min-width: 50px;
+    max-width: 150px;
+}
+
+#leaderboard th#name-header, #leaderboard td:nth-child(2) {
+    min-width: 100px;
+    max-width: 200px;
+}
+
+#leaderboard th#time-header, #leaderboard td:nth-child(4) {
+    min-width: 70px;
+    max-width: 120px;
 }
