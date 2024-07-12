@@ -1,6 +1,7 @@
 import { updateLeaderboard } from './leaderboard.mjs';
 import { gameState, getVisibleArea } from './game_state.mjs';
-import { TILE_SIZE} from "./defaults.mjs";
+import { TILE_SIZE} from "./ui/defaults.mjs";
+import { renderTile } from './ui/tileRenderer.mjs';
 
 
 const canvas = document.getElementById('gameCanvas');
@@ -173,23 +174,6 @@ function handleJoinResponse(response) {
     gameState.view_bottom = TILE_SIZE * response.update_area[1][1];
 }
 
-function renderTile(position, tile, left, top) {
-    const player = gameState.players[tile.player_id];
-    // Sometimes the player is not found, this is for alerting the tester about it:
-    if (!player) alert('Player not found:', tile.player_id);
-    ctx.fillStyle = '#808080';
-    ctx.fillRect(left, top, TILE_SIZE, TILE_SIZE);
-    ctx.fillStyle = tile.is_mine ? 'red' : player ? player.color : 'black';
-    ctx.fillRect(left + 1, top + 1, TILE_SIZE - 2, TILE_SIZE - 2);
-    if (!tile.is_mine && tile.adjacent_mines > 0) {
-        const colors = ['#0100fe', '#008001', '#fe0000', '#00007f', '#800000', '#008081', '#000000', '#808080'];
-        ctx.fillStyle = colors[tile.adjacent_mines - 1] || '#000000';
-        ctx.textAlign = 'center';
-        ctx.font = `bold ${3 * TILE_SIZE / 4}px Impact`;
-        ctx.fillText(tile.adjacent_mines, left + TILE_SIZE / 2, top + 3 * TILE_SIZE / 4);
-    }
-}
-
 function renderGame(clear) {
     if (clear) {
         const matrix = new DOMMatrix().translate(-gameState.view_left, -gameState.view_top)
@@ -203,7 +187,7 @@ function renderGame(clear) {
         if (left + TILE_SIZE < 0 || left > canvas.width) return;
         const top = y * TILE_SIZE - gameState.view_top;
         if (top + TILE_SIZE < 0 || top > canvas.height) return;
-        renderTile(position, tile, left, top);
+        renderTile(ctx, position, tile, left, top, gameState);
     });
 }
 
