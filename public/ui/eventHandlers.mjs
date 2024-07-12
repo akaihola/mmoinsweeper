@@ -1,5 +1,6 @@
 import { TILE_SIZE } from './defaults.mjs';
 import { gameState, getVisibleArea } from '../game_state.mjs';
+import { renderGame } from './gameRenderer.mjs';
 
 let mouseX = 0;
 let mouseY = 0;
@@ -7,7 +8,7 @@ let isDragging = false;
 let lastPosX = 0;
 let lastPosY = 0;
 
-export function initializeEventListeners(canvas, ws, renderGame) {
+export function initializeEventListeners(canvas, ws) {
     canvas.addEventListener('mousedown', (event) => {
         isDragging = true;
         lastPosX = event.clientX;

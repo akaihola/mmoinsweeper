@@ -1,12 +1,12 @@
 import { updateLeaderboard } from './leaderboard.mjs';
 import { gameState, getVisibleArea } from './game_state.mjs';
 import { TILE_SIZE } from "./ui/defaults.mjs";
-import { renderTile } from './ui/tileRenderer.mjs';
 import { initializeCanvas } from './ui/canvas.mjs';
-import { createCoveredTilePattern } from './ui/coveredTilePattern.mjs';
 import { initializeEventListeners } from './ui/eventHandlers.mjs';
+import { initializeRenderer, renderGame, handleJoinResponse, updatePlayers } from './ui/gameRenderer.mjs';
 
 const { canvas, ctx } = initializeCanvas();
+initializeRenderer(ctx);
 
 function log(...args) {
     console.log(new Date().toISOString().substring(11, 23), ...args);
@@ -62,6 +62,7 @@ ws.onmessage = (event) => {
         case 'Joined':
             handleJoinResponse(response);
             updatePlayers(response);
+            updateLeaderboard();
             renderGame(true);
             break;
         case 'Updated':
@@ -69,6 +70,7 @@ ws.onmessage = (event) => {
             break;
         case 'Uncovered':
             updatePlayers(response);
+            updateLeaderboard();
             renderGame(false);
             break;
         case 'Error':
@@ -78,48 +80,6 @@ ws.onmessage = (event) => {
             console.error('Unknown response type:', responseType);
     }
 }
-
-function updatePlayers(response) {
-    Object.entries(response.players).forEach(([playerId, player]) => {
-        gameState.players[playerId] = {
-            join_time: new Date(1000 * player.join_time),
-            color: player.color,
-            score: player.score
-        };
-    });
-    updateLeaderboard();
-}
-
-function handleJoinResponse(response) {
-    gameState.playing = true;
-    gameState.player_id = response.player_id;
-    gameState.token = response.token;
-    gameState.view_left = TILE_SIZE * response.update_area[0][0];
-    gameState.view_top = TILE_SIZE * response.update_area[0][1];
-    gameState.view_right = TILE_SIZE * response.update_area[1][0];
-    gameState.view_bottom = TILE_SIZE * response.update_area[1][1];
-}
-
-function renderGame(clear) {
-    if (clear) {
-        const matrix = new DOMMatrix().translate(-gameState.view_left, -gameState.view_top)
-        coveredTilePattern.setTransform(matrix);
-        ctx.fillStyle = coveredTilePattern;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
-    Object.entries(gameState.tiles).forEach(([position, tile]) => {
-        const [x, y] = JSON.parse(`[${position}]`);
-        const left = x * TILE_SIZE - gameState.view_left;
-        if (left + TILE_SIZE < 0 || left > canvas.width) return;
-        const top = y * TILE_SIZE - gameState.view_top;
-        if (top + TILE_SIZE < 0 || top > canvas.height) return;
-        renderTile(ctx, position, tile, left, top, gameState, TILE_SIZE);
-    });
-}
-
-const coveredTilePattern = createCoveredTilePattern(ctx);
-
-
 
 // FOR DEBUGGING:
 window.getVisibleArea = getVisibleArea;
