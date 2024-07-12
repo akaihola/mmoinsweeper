@@ -1,5 +1,7 @@
 import { TILE_SIZE } from './defaults.mjs';
-import { gameState, getVisibleArea } from '../game_state.mjs';
+import { gameState } from '../game_state.mjs';
+import { uiState } from './uiState.mjs';
+import { getVisibleArea } from './viewportUtils.mjs';
 import { renderTile } from './tileRenderer.mjs';
 import { createCoveredTilePattern } from './coveredTilePattern.mjs';
 
@@ -13,16 +15,16 @@ export function initializeRenderer(context) {
 
 export function renderGame(clear) {
     if (clear) {
-        const matrix = new DOMMatrix().translate(-gameState.view_left, -gameState.view_top)
+        const matrix = new DOMMatrix().translate(-uiState.view_left, -uiState.view_top)
         coveredTilePattern.setTransform(matrix);
         ctx.fillStyle = coveredTilePattern;
         ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     }
     Object.entries(gameState.tiles).forEach(([position, tile]) => {
         const [x, y] = JSON.parse(`[${position}]`);
-        const left = x * TILE_SIZE - gameState.view_left;
+        const left = x * TILE_SIZE - uiState.view_left;
         if (left + TILE_SIZE < 0 || left > ctx.canvas.width) return;
-        const top = y * TILE_SIZE - gameState.view_top;
+        const top = y * TILE_SIZE - uiState.view_top;
         if (top + TILE_SIZE < 0 || top > ctx.canvas.height) return;
         renderTile(ctx, position, tile, left, top, gameState, TILE_SIZE);
     });
@@ -32,10 +34,12 @@ export function handleJoinResponse(response) {
     gameState.playing = true;
     gameState.player_id = response.player_id;
     gameState.token = response.token;
-    gameState.view_left = TILE_SIZE * response.update_area[0][0];
-    gameState.view_top = TILE_SIZE * response.update_area[0][1];
-    gameState.view_right = TILE_SIZE * response.update_area[1][0];
-    gameState.view_bottom = TILE_SIZE * response.update_area[1][1];
+    updateUIState({
+        view_left: TILE_SIZE * response.update_area[0][0],
+        view_top: TILE_SIZE * response.update_area[0][1],
+        view_right: TILE_SIZE * response.update_area[1][0],
+        view_bottom: TILE_SIZE * response.update_area[1][1]
+    });
 }
 
 export function updatePlayers(response) {
