@@ -1,5 +1,7 @@
 import { TILE_SIZE } from './defaults.mjs';
-import { gameState, getVisibleArea } from '../game_state.mjs';
+import { gameState } from '../game_state.mjs';
+import { uiState } from './uiState.mjs';
+import { getVisibleArea } from './viewportUtils.mjs';
 import { renderGame } from './gameRenderer.mjs';
 
 let mouseX = 0;
@@ -44,10 +46,10 @@ function handleMove(event, ws, renderGame) {
     if (isDragging) {
         const deltaX = event.clientX - lastPosX;
         const deltaY = event.clientY - lastPosY;
-        gameState.view_left -= deltaX;
-        gameState.view_right -= deltaX;
-        gameState.view_top -= deltaY;
-        gameState.view_bottom -= deltaY;
+        uiState.view_left -= deltaX;
+        uiState.view_right -= deltaX;
+        uiState.view_top -= deltaY;
+        uiState.view_bottom -= deltaY;
         lastPosX = event.clientX;
         lastPosY = event.clientY;
         safeSend(ws, JSON.stringify({
@@ -74,8 +76,8 @@ function handleClick(event, ws) {
 
 function getTileUnderMouse() {
     return [
-        Math.floor((gameState.view_left + mouseX) / TILE_SIZE),
-        Math.floor((gameState.view_top + mouseY) / TILE_SIZE)
+        Math.floor((uiState.view_left + mouseX) / TILE_SIZE),
+        Math.floor((uiState.view_top + mouseY) / TILE_SIZE)
     ];
 }
 

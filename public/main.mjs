@@ -1,5 +1,6 @@
 import { updateLeaderboard } from './leaderboard.mjs';
-import { gameState, getVisibleArea } from './game_state.mjs';
+import { gameState } from './game_state.mjs';
+import { getVisibleArea } from './ui/viewportUtils.mjs';
 import { TILE_SIZE } from "./ui/defaults.mjs";
 import { initializeCanvas } from './ui/canvas.mjs';
 import { initializeEventListeners } from './ui/eventHandlers.mjs';

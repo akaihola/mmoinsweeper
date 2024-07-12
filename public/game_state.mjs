@@ -2,12 +2,10 @@ import { TILE_SIZE} from "./ui/defaults.mjs";
 
 export let gameState = {
     playing: false,
+    player_id: null,
+    token: null,
     tiles: {},
-    players: [],
-    view_top: 0,
-    view_bottom: 0,
-    view_left: 0,
-    view_right: 0
+    players: []
 };
 
 export function getVisibleArea() {
