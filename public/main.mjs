@@ -184,7 +184,7 @@ function renderGame(clear) {
         if (left + TILE_SIZE < 0 || left > canvas.width) return;
         const top = y * TILE_SIZE - gameState.view_top;
         if (top + TILE_SIZE < 0 || top > canvas.height) return;
-        renderTile(ctx, position, tile, left, top, gameState);
+        renderTile(ctx, position, tile, left, top, gameState, TILE_SIZE);
     });
 }
 
