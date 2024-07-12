@@ -2,12 +2,9 @@ import { updateLeaderboard } from './leaderboard.mjs';
 import { gameState, getVisibleArea } from './game_state.mjs';
 import { TILE_SIZE} from "./ui/defaults.mjs";
 import { renderTile } from './ui/tileRenderer.mjs';
+import { initializeCanvas } from './ui/canvas.mjs';
 
-
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+const { canvas, ctx } = initializeCanvas();
 
 function log(...args) {
     console.log(new Date().toISOString().substring(11, 23), ...args);
