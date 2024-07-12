@@ -4,66 +4,13 @@ import { TILE_SIZE } from "./ui/defaults.mjs";
 import { renderTile } from './ui/tileRenderer.mjs';
 import { initializeCanvas } from './ui/canvas.mjs';
 import { createCoveredTilePattern } from './ui/coveredTilePattern.mjs';
+import { initializeEventListeners } from './ui/eventHandlers.mjs';
 
 const { canvas, ctx } = initializeCanvas();
 
 function log(...args) {
     console.log(new Date().toISOString().substring(11, 23), ...args);
 }
-
-let mouseX = 0;
-let mouseY = 0;
-let isDragging = false;
-let lastPosX = 0;
-let lastPosY = 0;
-
-canvas.addEventListener('mousedown', (event) => {
-    isDragging = true;
-    lastPosX = event.clientX;
-    lastPosY = event.clientY;
-});
-
-function handleMove(event) {
-    if (isDragging) {
-        const deltaX = event.clientX - lastPosX;
-        const deltaY = event.clientY - lastPosY;
-        gameState.view_left -= deltaX;
-        gameState.view_right -= deltaX;
-        gameState.view_top -= deltaY;
-        gameState.view_bottom -= deltaY;
-        lastPosX = event.clientX;
-        lastPosY = event.clientY;
-        safeSend(ws, JSON.stringify({
-            action_type: 'Update',
-            area_to_update: getVisibleArea()
-        }));
-        renderGame(true);
-    } else {
-        mouseX = event.clientX;
-        mouseY = event.clientY;
-    }
-}
-
-canvas.addEventListener('mousemove', handleMove);
-
-canvas.addEventListener('mouseup', () => {
-    isDragging = false;
-});
-
-canvas.addEventListener('touchstart', (event) => {
-    const touch = event.touches[0];
-    isDragging = true;
-    lastPosX = touch.clientX;
-    lastPosY = touch.clientY;
-}, {passive: true});
-
-canvas.addEventListener('touchmove', (event) => {
-    handleMove(event.touches[0]);
-}, {passive: true});
-
-canvas.addEventListener('touchend', () => {
-    isDragging = false;
-});
 
 const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 const ws = new WebSocket(`${wsProtocol}//${window.location.host}/ws`);
@@ -100,26 +47,7 @@ ws.addEventListener('error', (error) => {
     console.error('WebSocket error:', error);
 });
 
-function getTileUnderMouse() {
-    return [
-        Math.floor((gameState.view_left + mouseX) / TILE_SIZE),
-        Math.floor((gameState.view_top + mouseY) / TILE_SIZE)
-    ]
-}
-
-function handle_click(event) {
-    log('Click event registered, mouse position:', mouseX, mouseY, 'event:', event.type);
-    safeSend(ws, JSON.stringify({
-        action_type: 'Uncover',
-        player_id: gameState.player_id,
-        token: gameState.token,
-        position: getTileUnderMouse(),
-        visible_area: getVisibleArea()
-    }));
-}
-
-canvas.addEventListener('click', handle_click);
-document.addEventListener('keyup', handle_click);
+initializeEventListeners(canvas, ws, renderGame);
 
 ws.onmessage = (event) => {
     const parsedResponse = JSON.parse(event.data);
