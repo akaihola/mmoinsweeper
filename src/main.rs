@@ -1,6 +1,7 @@
 use std::convert::Infallible;
 use std::sync::Arc;
 
+use clap::Parser;
 use futures_util::{SinkExt, StreamExt};
 use tokio::sync::{mpsc, Mutex};
 use warp::Filter;
@@ -14,6 +15,22 @@ use crate::game_state::GameStateResponse;
 
 mod game_state;
 mod tls;
+
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    /// Enable TLS
+    #[arg(short, long)]
+    tls: bool,
+
+    /// Disable browser caching
+    #[arg(short, long)]
+    no_cache: bool,
+
+    /// Port number
+    #[arg(short, long, default_value_t = 3030)]
+    port: u16,
+}
 
 async fn upgrade_ws(ws: warp::ws::Ws, game_state: Arc<Mutex<GameState>>) -> Result<impl warp::Reply, Infallible> {
     Ok(ws.on_upgrade(move |socket| handle_connection(socket, game_state)))
@@ -103,9 +120,11 @@ async fn run_server(no_cache: bool, use_tls: bool, port: u16) {
 
 #[tokio::main]
 async fn main() {
-    let no_cache = true; // TODO: Set based on command line args or config
-    let use_tls = true;  // TODO: Set based on command line args or config
-    let port = 3030;     // TODO: Set based on command line args or config
-    show_hostnames(port);
-    run_server(no_cache, use_tls, port).await;
+    let args = Args::parse();
+
+    if args.tls {
+        show_hostnames(args.port);
+    }
+
+    run_server(args.no_cache, args.tls, args.port).await;
 }
