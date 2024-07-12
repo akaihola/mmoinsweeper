@@ -1,4 +1,4 @@
-import { TILE_SIZE} from "./defaults.mjs";
+import { TILE_SIZE} from "./ui/defaults.mjs";
 
 export let gameState = {
     playing: false,

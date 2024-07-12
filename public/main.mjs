@@ -1,7 +1,6 @@
 import { updateLeaderboard } from './leaderboard.mjs';
 import { gameState, getVisibleArea } from './game_state.mjs';
 import { TILE_SIZE} from "./ui/defaults.mjs";
-import { renderTile } from './tileRenderer.mjs';
 import { renderTile } from './ui/tileRenderer.mjs';
 
 
