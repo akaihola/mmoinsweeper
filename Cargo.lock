@@ -649,23 +649,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "minesweeper_server"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "clap",
- "futures-util",
- "openssl",
- "rand",
- "serde",
- "serde_json",
- "tokio",
- "tokio-tungstenite 0.15.0",
- "uuid",
- "warp",
-]
-
-[[package]]
 name = "miniz_oxide"
 version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -683,6 +666,23 @@ dependencies = [
  "libc",
  "wasi",
  "windows-sys 0.48.0",
+]
+
+[[package]]
+name = "mmoinsweeper"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "clap",
+ "futures-util",
+ "openssl",
+ "rand",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-tungstenite 0.15.0",
+ "uuid",
+ "warp",
 ]
 
 [[package]]
