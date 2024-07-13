@@ -29,6 +29,15 @@ jobs:
           echo "## ${{ github.ref_name }}" >> ${{ github.workspace }}-CHANGELOG.md
           git log $(git describe --tags --abbrev=0)..HEAD --pretty=format:"- %s" >> ${{ github.workspace }}-CHANGELOG.md
 
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Update version in static content
+        run: |
+          python .github/scripts/update_version.py
+
       - name: Create static content archive
         run: |
           cd public && zip -r ../mmoinsweeper-static-content.zip .
