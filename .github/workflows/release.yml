@@ -9,8 +9,10 @@ jobs:
   release:
     name: Build and Release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       
       - name: Set up Rust
         uses: actions-rs/toolchain@v1
@@ -21,30 +23,22 @@ jobs:
       - name: Build
         run: cargo build --release
         
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+      - name: Generate Changelog
+        run: |
+          echo "# Changelog" > ${{ github.workspace }}-CHANGELOG.md
+          echo "## ${{ github.ref_name }}" >> ${{ github.workspace }}-CHANGELOG.md
+          git log $(git describe --tags --abbrev=0)..HEAD --pretty=format:"- %s" >> ${{ github.workspace }}-CHANGELOG.md
+        
+      - name: Release
+        uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          body_path: ${{ github.workspace }}-CHANGELOG.md
+          files: |
+            ./target/release/mmoinsweeper
           draft: false
           prerelease: false
-          
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+          make_latest: true
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./target/release/mmoinsweeper
-          asset_name: mmoinsweeper
-          asset_content_type: application/octet-stream
-          
-      - name: Update Latest Release
-        run: |
-          gh release delete latest --yes || true
-          gh release create latest --title "Latest Release" --notes "This is always the latest release." ./target/release/mmoinsweeper
-        env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
