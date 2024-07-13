@@ -38,13 +38,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./target/release/your_binary_name
-          asset_name: your_binary_name
+          asset_path: ./target/release/mmoinsweeper
+          asset_name: mmoinsweeper
           asset_content_type: application/octet-stream
           
       - name: Update Latest Release
         run: |
           gh release delete latest --yes || true
-          gh release create latest --title "Latest Release" --notes "This is always the latest release." ./target/release/your_binary_name
+          gh release create latest --title "Latest Release" --notes "This is always the latest release." ./target/release/mmoinsweeper
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
