@@ -3,7 +3,7 @@ import { TILE_SIZE } from './defaults.mjs';
 export function renderTile(ctx, position, tile, left, top, gameState, tileSize = TILE_SIZE) {
     const player = gameState.players[tile.player_id];
     // Sometimes the player is not found, this is for alerting the tester about it:
-    if (!player) alert('Player not found:', tile.player_id);
+    if (!player) console.log('*** Player not found:', tile.player_id);
     ctx.fillStyle = '#808080';
     ctx.fillRect(left, top, tileSize, tileSize);
     ctx.fillStyle = tile.is_mine ? 'red' : player ? player.color : 'black';

@@ -79,6 +79,7 @@ pub enum GameStateResponse {
     },
     Updated {
         tiles: HashMap<PositionString, ClientTile>,
+        players: HashMap<u32, ClientPlayer>,
     },
     Uncovered {
         tiles: HashMap<PositionString, ClientTile>,
@@ -128,7 +129,7 @@ impl GameState {
         let tile = self.board.get(&position).unwrap();
         let response = GameStateResponse::Uncovered {
             tiles: self.visible_tiles((position, position)),
-            players: self.players_response(Some(tile.player_id)),
+            players: self.players_response(Some(&[tile.player_id])),
         };
         let message = serde_json::to_string(&response).unwrap();
         for (_, player) in &self.players {
@@ -183,9 +184,10 @@ impl GameState {
     }
 
     pub fn handle_update_action(&self, area_to_update: Area) -> GameStateResponse {
-        GameStateResponse::Updated {
-            tiles: self.visible_tiles(area_to_update),
-        }
+        let tiles = self.visible_tiles(area_to_update);
+        let player_ids = tiles.values().map(|tile| tile.player_id).collect::<Vec<_>>();
+        let players = self.players_response(Some(player_ids.as_slice()));
+        GameStateResponse::Updated { tiles, players }
     }
 
     pub fn handle_uncover_action(&mut self, player_id: u32, token: String, position: Position, visible_area: Area) -> GameStateResponse {
@@ -209,7 +211,7 @@ impl GameState {
         }
         GameStateResponse::Uncovered {
             tiles: self.visible_tiles(visible_area),
-            players: self.players_response(Some(player_id)),
+            players: self.players_response(Some(&[player_id])),
         }
     }
 
@@ -231,9 +233,9 @@ impl GameState {
         }
     }
 
-    pub fn players_response(&self, player_id: Option<u32>) -> HashMap<u32, ClientPlayer> {
+    pub fn players_response(&self, player_ids: Option<&[u32]>) -> HashMap<u32, ClientPlayer> {
         self.players.iter().filter_map(|(&id, player)| {
-            if player_id.map_or(true, |player_id| player_id == id) {
+            if player_ids.map_or(true, |ids| ids.contains(&id)) {
                 Some((id, ClientPlayer {
                     join_time: self.epoch + player.join_time,
                     color: player.color.clone(),

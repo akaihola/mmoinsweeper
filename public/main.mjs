@@ -67,6 +67,8 @@ ws.onmessage = (event) => {
             renderGame(true);
             break;
         case 'Updated':
+            updatePlayers(response);
+            updateLeaderboard();
             renderGame(true);
             break;
         case 'Uncovered':
