@@ -1,5 +1,22 @@
 # Massively Multiplayer Online Infinite Minesweeper
 
+
+## Running locally with SSL
+
+1. Register a DNS name for your local machine on which you will run the server. For example, add an entry to your `/etc/hosts` file, or add a subdomain to a domain you own, and point it to your machine.
+2. Install Rust: https://www.rust-lang.org/tools/install
+3. Clone the repository: `git clone https://github.com/akaihola/mmoinsweeper.git`
+4. Change to the project directory: `cd mmoinsweeper`
+5. Create a self-signed certificate:
+
+       openssl genrsa -out key.pem 2048
+       openssl req -new -key key.pem -out csr.pem
+       openssl x509 -req -days 365 -in csr.pem -signkey key.pem -out cert.pem
+
+6. Run the server: `cargo run -- --port 3030 --tls --no-cache`
+7. Open your browser and navigate to `https://localhost:3030`
+
+
 ## Nginx Configuration Example
 
 Here's an example Nginx site configuration that terminates TLS, proxies static and WebSocket traffic to the Rust backend, and handles Let's Encrypt:
