@@ -28,13 +28,18 @@ jobs:
           echo "# Changelog" > ${{ github.workspace }}-CHANGELOG.md
           echo "## ${{ github.ref_name }}" >> ${{ github.workspace }}-CHANGELOG.md
           git log $(git describe --tags --abbrev=0)..HEAD --pretty=format:"- %s" >> ${{ github.workspace }}-CHANGELOG.md
-        
+
+      - name: Create static content archive
+        run: |
+          zip -r mmoinsweeper-static-content.zip public/
+
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
           body_path: ${{ github.workspace }}-CHANGELOG.md
           files: |
             ./target/release/mmoinsweeper
+            ./mmoinsweeper-static-content.zip
           draft: false
           prerelease: false
           fail_on_unmatched_files: true
