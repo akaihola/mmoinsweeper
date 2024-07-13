@@ -31,7 +31,7 @@ jobs:
 
       - name: Create static content archive
         run: |
-          zip -r mmoinsweeper-static-content.zip public/
+          cd public && zip -r ../mmoinsweeper-static-content.zip .
 
       - name: Release
         uses: softprops/action-gh-release@v2
