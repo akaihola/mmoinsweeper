@@ -24,19 +24,23 @@ export function initializeEventListeners(canvas, ws) {
     });
 
     canvas.addEventListener('touchstart', (event) => {
+        event.preventDefault();
         const touch = event.touches[0];
         isDragging = true;
         lastPosX = touch.clientX;
         lastPosY = touch.clientY;
-    }, {passive: true});
+    }, { passive: false });
 
     canvas.addEventListener('touchmove', (event) => {
+        event.preventDefault();
         handleMove(event.touches[0], ws, renderGame);
-    }, {passive: true});
+    }, { passive: false });
 
-    canvas.addEventListener('touchend', () => {
+    canvas.addEventListener('touchend', (event) => {
+        event.preventDefault();
         isDragging = false;
-    });
+        handleClick(event.changedTouches[0], ws);
+    }, { passive: false });
 
     canvas.addEventListener('click', (event) => handleClick(event, ws));
     document.addEventListener('keyup', (event) => handleClick(event, ws));
@@ -64,20 +68,22 @@ function handleMove(event, ws, renderGame) {
 }
 
 function handleClick(event, ws) {
-    console.log('Click event registered, mouse position:', mouseX, mouseY, 'event:', event.type);
+    const x = event.clientX || event.pageX || mouseX;
+    const y = event.clientY || event.pageY || mouseY;
+    console.log('Click event registered, position:', x, y, 'event:', event.type);
     safeSend(ws, JSON.stringify({
         action_type: 'Uncover',
         player_id: gameState.player_id,
         token: gameState.token,
-        position: getTileUnderMouse(),
+        position: getTileUnderPointer(x, y),
         visible_area: getVisibleArea()
     }));
 }
 
-function getTileUnderMouse() {
+function getTileUnderPointer(x, y) {
     return [
-        Math.floor((uiState.view_left + mouseX) / TILE_SIZE),
-        Math.floor((uiState.view_top + mouseY) / TILE_SIZE)
+        Math.floor((uiState.view_left + x) / TILE_SIZE),
+        Math.floor((uiState.view_top + y) / TILE_SIZE)
     ];
 }
 
