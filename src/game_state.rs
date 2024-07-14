@@ -42,6 +42,7 @@ pub struct DbPlayer {
     pub score: u32,
     pub sender: Option<mpsc::UnboundedSender<Message>>,
     pub visible_area: Area,
+    pub name: String,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -49,6 +50,7 @@ pub struct ClientPlayer {
     pub join_time: UnixSeconds,
     pub color: String,
     pub score: u32,
+    pub name: String,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -65,6 +67,11 @@ pub enum PlayerAction {
         token: String,
         position: Position,
         visible_area: Area,
+    },
+    UpdateNickname {
+        player_id: u32,
+        token: String,
+        new_name: String,
     },
 }
 
@@ -83,6 +90,11 @@ pub enum GameStateResponse {
     },
     Uncovered {
         tiles: HashMap<PositionString, ClientTile>,
+        players: HashMap<u32, ClientPlayer>,
+    },
+    NicknameUpdated {
+        player_id: u32,
+        new_name: String,
         players: HashMap<u32, ClientPlayer>,
     },
     Error {
@@ -109,6 +121,27 @@ impl GameState {
             players: HashMap::new(),
             next_player_id: 1,
             uncover_history: VecDeque::new(),
+        }
+    }
+
+    pub fn handle_update_nickname_action(&mut self, player_id: u32, token: String, new_name: String) -> GameStateResponse {
+        if self.player_valid_and_playing(player_id, token) {
+            if let Some(player) = self.players.get_mut(&player_id) {
+                player.name = new_name.clone();
+                GameStateResponse::NicknameUpdated {
+                    player_id,
+                    new_name,
+                    players: self.players_response(None),
+                }
+            } else {
+                GameStateResponse::Error {
+                    message: "Player not found".to_string(),
+                }
+            }
+        } else {
+            GameStateResponse::Error {
+                message: "Invalid player or token".to_string(),
+            }
         }
     }
 
@@ -168,6 +201,7 @@ impl GameState {
             game_over: false,
             sender: None,
             visible_area,
+            name: format!("Player {}", player_id),
         });
 
         self.uncover(start_position, player_id);
@@ -221,6 +255,9 @@ impl GameState {
             PlayerAction::Update { area_to_update } => self.handle_update_action(area_to_update),
             PlayerAction::Uncover { player_id, token, position, visible_area } => {
                 self.handle_uncover_action(player_id, token, position, visible_area)
+            },
+            PlayerAction::UpdateNickname { player_id, token, new_name } => {
+                self.handle_update_nickname_action(player_id, token, new_name)
             }
         }
     }
@@ -240,6 +277,7 @@ impl GameState {
                     join_time: self.epoch + player.join_time,
                     color: player.color.clone(),
                     score: player.score,
+                    name: player.name.clone(),
                 }))
             } else {
                 None
