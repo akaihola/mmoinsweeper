@@ -175,7 +175,7 @@ impl GameState {
         }
     }
 
-    pub fn handle_join_action(&mut self, visible_area: Area) -> GameStateResponse {
+    pub fn handle_join_action(&mut self, visible_area: Area, token: Option<String>) -> GameStateResponse {
         let player_id = self.next_player_id;  // non-zero = playing
         self.next_player_id += 1;
         let start_position = self.find_random_start_position();
@@ -194,15 +194,25 @@ impl GameState {
             ),
         );
 
+        let (token, name) = if let Some(token) = token {
+            if let Some(existing_player) = self.players.values().find(|p| p.token == token) {
+                (token, existing_player.name.clone())
+            } else {
+                (uuid::Uuid::new_v4().to_string(), format!("Player {}", player_id))
+            }
+        } else {
+            (uuid::Uuid::new_v4().to_string(), format!("Player {}", player_id))
+        };
+
         self.players.insert(player_id, DbPlayer {
             join_time: seconds_since(self.epoch),
-            token: uuid::Uuid::new_v4().to_string(),
+            token: token.clone(),
             color: format!("#{:06x}", rand::thread_rng().gen_range(0..0xFFFFFF)),
             score: 0,
             game_over: false,
             sender: None,
             visible_area,
-            name: format!("Player {}", player_id),
+            name,
         });
 
         self.uncover(start_position, player_id);
@@ -211,7 +221,7 @@ impl GameState {
 
         GameStateResponse::Joined {
             player_id: player_id,
-            token: self.players[&player_id].token.clone(),
+            token: token,
             update_area: visible_area,
             tiles: self.visible_tiles(visible_area),
             players: self.players_response(None),
