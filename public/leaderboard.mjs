@@ -59,7 +59,7 @@ export function updateLeaderboard() {
         row.insertCell(0).innerText = index + 1; // Rank
         const nameCell = row.insertCell(1);
         nameCell.innerHTML = `
-            <span class="player-name">${player.name}</span>
+            <span class="player-name">${player.name || 'Anonymous'}</span>
             ${player.id === gameState.player_id ? '<span class="edit-name">✎</span>' : ''}
         `;
         nameCell.style.backgroundColor = player.color;
