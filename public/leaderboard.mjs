@@ -59,7 +59,7 @@ export function updateLeaderboard() {
         row.insertCell(0).innerText = index + 1; // Rank
         const nameCell = row.insertCell(1);
         nameCell.innerHTML = `
-            <span class="player-name">${player.name || 'Anonymous'}</span>
+            <span class="player-name">${gameState.players[player.id].name || 'Anonymous'}</span>
             ${player.id === gameState.player_id ? '<span class="edit-name">✎</span>' : ''}
         `;
         nameCell.style.backgroundColor = player.color;
@@ -147,7 +147,7 @@ function editPlayerName(player) {
 
 export function updatePlayerName(playerId, newName) {
     if (gameState.players[playerId]) {
-        gameState.players[playerId].name = newName;
+        gameState.players[playerId].name = newName || 'Anonymous';
         updateLeaderboard();
     }
 }
