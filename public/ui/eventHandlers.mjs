@@ -33,20 +33,20 @@ export function initializeEventListeners(canvas) {
 
     canvas.addEventListener('touchmove', (event) => {
         event.preventDefault();
-        handleMove(event.touches[0], ws, renderGame);
+        handleMove(event.touches[0]);
     }, { passive: false });
 
     canvas.addEventListener('touchend', (event) => {
         event.preventDefault();
         isDragging = false;
-        handleClick(event.changedTouches[0], ws);
+        handleClick(event.changedTouches[0]);
     }, { passive: false });
 
-    canvas.addEventListener('click', (event) => handleClick(event, ws));
-    document.addEventListener('keyup', (event) => handleClick(event, ws));
+    canvas.addEventListener('click', (event) => handleClick(event));
+    document.addEventListener('keyup', (event) => handleClick(event));
 }
 
-function handleMove(event, renderGame) {
+function handleMove(event) {
     if (isDragging) {
         const deltaX = event.clientX - lastPosX;
         const deltaY = event.clientY - lastPosY;
@@ -87,11 +87,11 @@ function getTileUnderPointer(x, y) {
     ];
 }
 
-function safeSend(ws, message) {
-    if (ws.readyState === WebSocket.OPEN) {
-        ws.send(message);
+function safeSend(message) {
+    if (gameState.ws && gameState.ws.readyState === WebSocket.OPEN) {
+        gameState.ws.send(message);
         console.log('Message sent to server', message);
     } else {
-        console.error('WebSocket is not open. ReadyState:', ws.readyState);
+        console.error('WebSocket is not open or not initialized.');
     }
 }
