@@ -1,3 +1,4 @@
+import { TILE_SIZE } from './ui/defaults.mjs';
 import { gameState } from './game_state.mjs';
 import { getVisibleArea } from './ui/viewportUtils.mjs';
 import { initializeCanvas } from './ui/canvas.mjs';
