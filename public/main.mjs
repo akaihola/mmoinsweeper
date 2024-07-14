@@ -17,7 +17,7 @@ initializeWebSocket({
         [Math.floor(-horizontalTiles / 2), Math.ceil(-verticalTiles / 2)],  // left, top
         [Math.floor(horizontalTiles / 2), Math.ceil(verticalTiles / 2)]  // right, bottom
     ],
-    token: storedToken || null
+    ...(storedToken ? { token: storedToken } : {})
 });
 initializeEventListeners(canvas);
 
