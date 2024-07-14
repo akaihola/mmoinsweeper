@@ -1,6 +1,6 @@
-import { gameState, getVisibleArea } from './game_state.mjs';
-import { safeSend } from './websocket.mjs';
+import {gameState, getVisibleArea} from './game_state.mjs';
 import {log} from "./utils.mjs";
+import {safeSend} from './websocket.mjs';
 
 
 // Leaderboard logic
@@ -37,7 +37,7 @@ window.addEventListener('resize', updateHandlePosition);
 
 // MutationObserver to watch for changes in leaderboardContainer's style
 const observer = new MutationObserver(updateHandlePosition);
-observer.observe(leaderboardContainer, { attributes: true, attributeFilter: ['style'] });
+observer.observe(leaderboardContainer, {attributes: true, attributeFilter: ['style']});
 
 document.getElementById('score-header').addEventListener('click', () => {
     sortBy = 'score';

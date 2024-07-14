@@ -1,9 +1,8 @@
-import { TILE_SIZE } from './defaults.mjs';
-import { gameState } from '../game_state.mjs';
-import { uiState, updateUIState } from './uiState.mjs';
-import { getVisibleArea } from './viewportUtils.mjs';
-import { renderTile } from './tileRenderer.mjs';
-import { createCoveredTilePattern } from './coveredTilePattern.mjs';
+import {TILE_SIZE} from './defaults.mjs';
+import {gameState} from '../game_state.mjs';
+import {uiState, updateUIState} from './uiState.mjs';
+import {renderTile} from './tileRenderer.mjs';
+import {createCoveredTilePattern} from './coveredTilePattern.mjs';
 
 let ctx;
 let coveredTilePattern;
