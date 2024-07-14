@@ -58,6 +58,7 @@ pub struct ClientPlayer {
 pub enum PlayerAction {
     Join {
         visible_area: Area,
+        token: Option<String>,
     },
     Update {
         area_to_update: Area,
@@ -251,7 +252,7 @@ impl GameState {
 
     pub fn process_action(&mut self, action: PlayerAction) -> GameStateResponse {
         match action {
-            PlayerAction::Join { visible_area } => self.handle_join_action(visible_area),
+            PlayerAction::Join { visible_area, token } => self.handle_join_action(visible_area, token),
             PlayerAction::Update { area_to_update } => self.handle_update_action(area_to_update),
             PlayerAction::Uncover { player_id, token, position, visible_area } => {
                 self.handle_uncover_action(player_id, token, position, visible_area)
