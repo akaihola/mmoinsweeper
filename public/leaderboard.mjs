@@ -139,6 +139,7 @@ function editPlayerName(player) {
         safeSend(JSON.stringify({
             action_type: 'UpdateNickname',
             player_id: player.id,
+            token: gameState.token,
             new_name: newName
         }));
     }
