@@ -33,6 +33,7 @@ export function handleJoinResponse(response) {
     gameState.playing = true;
     gameState.player_id = response.player_id;
     gameState.token = response.token;
+    localStorage.setItem('playerToken', response.token);
     updateUIState({
         view_left: TILE_SIZE * response.update_area[0][0],
         view_top: TILE_SIZE * response.update_area[0][1],
