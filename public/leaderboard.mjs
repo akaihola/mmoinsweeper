@@ -1,4 +1,5 @@
 import { gameState, getVisibleArea } from './game_state.mjs';
+import { safeSend } from './main.mjs';
 
 
 // Leaderboard logic
@@ -56,9 +57,15 @@ export function updateLeaderboard() {
         const row = leaderboardTable.insertRow();
         row.insertCell(0).innerText = index + 1; // Rank
         const nameCell = row.insertCell(1);
-        nameCell.innerText = player.name; // Name
+        nameCell.innerHTML = `
+            <span class="player-name">${player.name}</span>
+            ${player.id === gameState.player_id ? '<span class="edit-name">✎</span>' : ''}
+        `;
         nameCell.style.backgroundColor = player.color;
         nameCell.style.color = 'black';
+        if (player.id === gameState.player_id) {
+            nameCell.querySelector('.edit-name').addEventListener('click', () => editPlayerName(player));
+        }
         row.insertCell(2).innerText = player.score; // Score
         row.insertCell(3).innerText = formatTime(player.join_time); // Time
         row.insertCell(4).innerText = player.tph.toFixed(2); // TPH
@@ -122,4 +129,22 @@ function formatTime(joinTime) {
     if (hours > 0 || minutes > 0) timeString += `${minutes}m `;
     timeString += `${seconds}s`;
     return timeString.trim();
+}
+
+function editPlayerName(player) {
+    const newName = prompt("Enter your new nickname:", player.name);
+    if (newName && newName !== player.name) {
+        safeSend(gameState.ws, JSON.stringify({
+            action_type: 'UpdateNickname',
+            player_id: player.id,
+            new_name: newName
+        }));
+    }
+}
+
+export function updatePlayerName(playerId, newName) {
+    if (gameState.players[playerId]) {
+        gameState.players[playerId].name = newName;
+        updateLeaderboard();
+    }
 }
