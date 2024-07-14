@@ -160,31 +160,21 @@ export function updatePlayersFromServer(players) {
     let updated = false;
     Object.entries(players).forEach(([playerIdStr, player]) => {
         const playerId = parseInt(playerIdStr);
-        if (!gameState.players[playerId]) {
-            gameState.players[playerId] = {
-                id: playerId,
-                join_time: new Date(1000 * player.join_time),
-                color: player.color,
-                score: player.score,
-                name: player.name || 'Anonymous'
-            };
+        const existingPlayer = gameState.players[playerId];
+        const updatedPlayer = {
+            id: playerId,
+            join_time: new Date(1000 * player.join_time),
+            color: player.color,
+            score: player.score,
+            name: player.name || 'Anonymous'
+        };
+
+        if (!existingPlayer || JSON.stringify(existingPlayer) !== JSON.stringify(updatedPlayer)) {
+            gameState.players[playerId] = updatedPlayer;
             updated = true;
-        } else {
-            // Update existing player data
-            if (gameState.players[playerId].color !== player.color) {
-                gameState.players[playerId].color = player.color;
-                updated = true;
-            }
-            if (gameState.players[playerId].score !== player.score) {
-                gameState.players[playerId].score = player.score;
-                updated = true;
-            }
-            if (player.name && gameState.players[playerId].name !== player.name) {
-                gameState.players[playerId].name = player.name;
-                updated = true;
-            }
         }
     });
+
     if (updated) {
         log('Players updated from server, refreshing leaderboard');
         updateLeaderboard();

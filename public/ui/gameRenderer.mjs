@@ -39,15 +39,18 @@ export function handleJoinResponse(response) {
         view_right: TILE_SIZE * response.update_area[1][0],
         view_bottom: TILE_SIZE * response.update_area[1][1]
     });
+    updatePlayers(response);
 }
 
 export function updatePlayers(response) {
     Object.entries(response.players).forEach(([playerIdStr, player]) => {
-        gameState.players[playerIdStr] = {
-            id: parseInt(playerIdStr),  // needed for the leaderboard
+        const playerId = parseInt(playerIdStr);
+        gameState.players[playerId] = {
+            id: playerId,
             join_time: new Date(1000 * player.join_time),
             color: player.color,
-            score: player.score
+            score: player.score,
+            name: player.name || 'Anonymous'
         };
     });
 }
