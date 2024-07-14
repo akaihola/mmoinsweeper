@@ -10,14 +10,14 @@ let isDragging = false;
 let lastPosX = 0;
 let lastPosY = 0;
 
-export function initializeEventListeners(canvas, ws) {
+export function initializeEventListeners(canvas, renderGame) {
     canvas.addEventListener('mousedown', (event) => {
         isDragging = true;
         lastPosX = event.clientX;
         lastPosY = event.clientY;
     });
 
-    canvas.addEventListener('mousemove', (event) => handleMove(event, ws, renderGame));
+    canvas.addEventListener('mousemove', (event) => handleMove(event, renderGame));
 
     canvas.addEventListener('mouseup', () => {
         isDragging = false;
@@ -46,7 +46,7 @@ export function initializeEventListeners(canvas, ws) {
     document.addEventListener('keyup', (event) => handleClick(event, ws));
 }
 
-function handleMove(event, ws, renderGame) {
+function handleMove(event, renderGame) {
     if (isDragging) {
         const deltaX = event.clientX - lastPosX;
         const deltaY = event.clientY - lastPosY;
@@ -56,7 +56,7 @@ function handleMove(event, ws, renderGame) {
         uiState.view_bottom -= deltaY;
         lastPosX = event.clientX;
         lastPosY = event.clientY;
-        safeSend(ws, JSON.stringify({
+        safeSend(JSON.stringify({
             action_type: 'Update',
             area_to_update: getVisibleArea()
         }));
