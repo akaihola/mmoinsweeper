@@ -1,5 +1,5 @@
 import { gameState, getVisibleArea } from './game_state.mjs';
-import { safeSend } from './main.mjs';
+import { safeSend } from './utils.mjs';
 
 
 // Leaderboard logic

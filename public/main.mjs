@@ -5,6 +5,7 @@ import { TILE_SIZE } from "./ui/defaults.mjs";
 import { initializeCanvas } from './ui/canvas.mjs';
 import { initializeEventListeners } from './ui/eventHandlers.mjs';
 import { initializeRenderer, renderGame, handleJoinResponse, updatePlayers } from './ui/gameRenderer.mjs';
+import { safeSend } from './utils.mjs';
 
 const { canvas, ctx } = initializeCanvas();
 initializeRenderer(ctx);
@@ -16,15 +17,6 @@ function log(...args) {
 const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 const ws = new WebSocket(`${wsProtocol}//${window.location.host}/ws`);
 
-// Check WebSocket connection state before sending a message
-function safeSend(ws, message) {
-    if (ws.readyState === WebSocket.OPEN) {
-        ws.send(message);
-        log('Message sent to server', message);
-    } else {
-        console.error('WebSocket is not open. ReadyState:', ws.readyState);
-    }
-}
 
 ws.addEventListener('open', () => {
     const horizontalTiles = Math.floor(canvas.width / TILE_SIZE);
