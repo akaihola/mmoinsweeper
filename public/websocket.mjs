@@ -23,18 +23,26 @@ export function initializeWebSocket(joinAction) {
     });
 
     ws.onmessage = (event) => {
-        const parsedResponse = JSON.parse(event.data);
-        const responseType = Object.keys(parsedResponse)[0];
-        const response = parsedResponse[responseType];
-        log('Message received from server', event.data.length, 'bytes', response);
-        Object.entries(response.tiles).forEach(([positionString, tile]) => {
-            gameState.tiles[positionString] = tile;
-        });
+        log('Raw message received from server:', event.data);
+        try {
+            const parsedResponse = JSON.parse(event.data);
+            const responseType = Object.keys(parsedResponse)[0];
+            const response = parsedResponse[responseType];
+            log('Parsed message:', response);
+            
+            if (response && response.tiles) {
+                Object.entries(response.tiles).forEach(([positionString, tile]) => {
+                    gameState.tiles[positionString] = tile;
+                });
+            }
 
-        if (messageHandlers[responseType]) {
-            messageHandlers[responseType](response);
-        } else {
-            console.error('Unknown response type:', responseType);
+            if (messageHandlers[responseType]) {
+                messageHandlers[responseType](response);
+            } else {
+                console.error('Unknown response type:', responseType);
+            }
+        } catch (error) {
+            console.error('Error parsing message:', error);
         }
     };
 
