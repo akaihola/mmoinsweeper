@@ -155,3 +155,26 @@ export function updatePlayerName(playerId, newName) {
         console.error(`Player ${playerId} not found in gameState`);
     }
 }
+
+export function updatePlayersFromServer(players) {
+    Object.entries(players).forEach(([playerIdStr, player]) => {
+        const playerId = parseInt(playerIdStr);
+        if (!gameState.players[playerId]) {
+            gameState.players[playerId] = {
+                id: playerId,
+                join_time: new Date(1000 * player.join_time),
+                color: player.color,
+                score: player.score,
+                name: player.name || 'Anonymous'
+            };
+        } else {
+            // Update existing player data
+            gameState.players[playerId].color = player.color;
+            gameState.players[playerId].score = player.score;
+            if (player.name) {
+                gameState.players[playerId].name = player.name;
+            }
+        }
+    });
+    updateLeaderboard();
+}
