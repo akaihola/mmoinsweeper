@@ -3,6 +3,7 @@ import { gameState } from '../game_state.mjs';
 import { uiState } from './uiState.mjs';
 import { getVisibleArea } from './viewportUtils.mjs';
 import { renderGame } from './gameRenderer.mjs';
+import { safeSend } from '../websocket.mjs';
 
 let mouseX = 0;
 let mouseY = 0;
@@ -85,13 +86,4 @@ function getTileUnderPointer(x, y) {
         Math.floor((uiState.view_left + x) / TILE_SIZE),
         Math.floor((uiState.view_top + y) / TILE_SIZE)
     ];
-}
-
-function safeSend(message) {
-    if (gameState.ws && gameState.ws.readyState === WebSocket.OPEN) {
-        gameState.ws.send(message);
-        console.log('Message sent to server', message);
-    } else {
-        console.error('WebSocket is not open or not initialized.');
-    }
 }

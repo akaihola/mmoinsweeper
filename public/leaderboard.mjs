@@ -135,7 +135,7 @@ function formatTime(joinTime) {
 function editPlayerName(player) {
     const newName = prompt("Enter your new nickname:", player.name);
     if (newName && newName !== player.name) {
-        safeSend(gameState.ws, JSON.stringify({
+        safeSend(JSON.stringify({
             action_type: 'UpdateNickname',
             player_id: player.id,
             new_name: newName
