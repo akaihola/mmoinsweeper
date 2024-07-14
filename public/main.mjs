@@ -8,7 +8,7 @@ import { initializeWebSocket } from './websocket.mjs';
 const { canvas, ctx } = initializeCanvas();
 initializeRenderer(ctx);
 initializeWebSocket();
-initializeEventListeners(canvas, ws, renderGame);
+initializeEventListeners(canvas, renderGame);
 
 // FOR DEBUGGING:
 window.getVisibleArea = getVisibleArea;
