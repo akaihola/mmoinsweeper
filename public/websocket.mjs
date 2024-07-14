@@ -77,7 +77,9 @@ registerMessageHandler('Updated', (response) => {
 });
 
 registerMessageHandler('Uncovered', (response) => {
-    updatePlayers(response);
+    if (response.players) {
+        updatePlayersFromServer(response.players);
+    }
     updateLeaderboard();
     renderGame(false);
 });
