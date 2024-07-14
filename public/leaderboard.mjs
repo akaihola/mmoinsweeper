@@ -1,6 +1,6 @@
 import {gameState, getVisibleArea} from './game_state.mjs';
 import {log} from "./utils.mjs";
-import {safeSend} from './websocket.mjs';
+import {safeSend} from './net/websocket.mjs';
 
 
 // Leaderboard logic

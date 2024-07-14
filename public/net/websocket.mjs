@@ -1,7 +1,7 @@
-import {updateLeaderboard, updatePlayerName, updatePlayersFromServer} from './leaderboard.mjs';
-import {gameState} from './game_state.mjs';
-import {handleJoinResponse, renderGame, updatePlayers} from './ui/gameRenderer.mjs';
-import {log} from "./utils.mjs";
+import {updateLeaderboard, updatePlayerName, updatePlayersFromServer} from '../leaderboard.mjs';
+import {gameState} from '../game_state.mjs';
+import {handleJoinResponse, renderGame, updatePlayers} from '../ui/gameRenderer.mjs';
+import {log} from "../utils.mjs";
 
 let ws;
 const messageHandlers = {};

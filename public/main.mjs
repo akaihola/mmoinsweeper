@@ -1,24 +1,19 @@
-import { TILE_SIZE } from './ui/defaults.mjs';
-import { gameState } from './game_state.mjs';
-import { getVisibleArea } from './ui/viewportUtils.mjs';
-import { initializeCanvas } from './ui/canvas.mjs';
-import { initializeEventListeners } from './ui/eventHandlers.mjs';
-import { initializeRenderer, renderGame } from './ui/gameRenderer.mjs';
-import { initializeWebSocket } from './websocket.mjs';
+import {TILE_SIZE} from './ui/defaults.mjs';
+import {gameState} from './game_state.mjs';
+import {getVisibleArea} from './ui/viewportUtils.mjs';
+import {initializeCanvas} from './ui/canvas.mjs';
+import {initializeEventListeners} from './ui/eventHandlers.mjs';
+import {initializeRenderer} from './ui/gameRenderer.mjs';
+import {initializeWebSocket} from './net/websocket.mjs';
+import {getJoinAction} from "./net/serverProtocol.mjs";
 
-const { canvas, ctx } = initializeCanvas();
+const {canvas, ctx} = initializeCanvas();
 initializeRenderer(ctx);
 const horizontalTiles = Math.floor(canvas.width / TILE_SIZE);
 const verticalTiles = Math.floor(canvas.height / TILE_SIZE);
-const storedToken = localStorage.getItem('playerToken');
-initializeWebSocket({
-    action_type: 'Join',
-    visible_area: [
-        [Math.floor(-horizontalTiles / 2), Math.ceil(-verticalTiles / 2)],  // left, top
-        [Math.floor(horizontalTiles / 2), Math.ceil(verticalTiles / 2)]  // right, bottom
-    ],
-    ...(storedToken ? { token: storedToken } : {})
-});
+
+const joinAction = getJoinAction(horizontalTiles, verticalTiles, gameState.token);
+initializeWebSocket(joinAction);
 initializeEventListeners(canvas);
 
 // FOR DEBUGGING:

@@ -3,7 +3,7 @@ import { gameState } from '../game_state.mjs';
 import { uiState } from './uiState.mjs';
 import { getVisibleArea } from './viewportUtils.mjs';
 import { renderGame } from './gameRenderer.mjs';
-import { safeSend } from '../websocket.mjs';
+import { safeSend } from '../net/websocket.mjs';
 
 let mouseX = 0;
 let mouseY = 0;

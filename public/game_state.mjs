@@ -3,7 +3,7 @@ import { TILE_SIZE} from "./ui/defaults.mjs";
 export let gameState = {
     playing: false,
     player_id: null,
-    token: null,
+    token: localStorage.getItem('playerToken'),
     tiles: {},
     players: []
 };
