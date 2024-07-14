@@ -42,8 +42,9 @@ export function handleJoinResponse(response) {
 }
 
 export function updatePlayers(response) {
-    Object.entries(response.players).forEach(([playerId, player]) => {
-        gameState.players[playerId] = {
+    Object.entries(response.players).forEach(([playerIdStr, player]) => {
+        gameState.players[playerIdStr] = {
+            id: parseInt(playerIdStr),  // needed for the leaderboard
             join_time: new Date(1000 * player.join_time),
             color: player.color,
             score: player.score
