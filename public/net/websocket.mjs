@@ -1,7 +1,6 @@
-import {updateLeaderboard, updatePlayerName, updatePlayersFromServer} from '../leaderboard.mjs';
 import {gameState} from '../game_state.mjs';
-import {handleJoinResponse, renderGame, updatePlayers} from '../ui/gameRenderer.mjs';
 import {log} from "../utils.mjs";
+import {registerResponseHandlers} from "./serverProtocol.mjs";
 
 let ws;
 const messageHandlers = {};
@@ -49,7 +48,7 @@ export function initializeWebSocket(joinAction) {
     gameState.ws = ws;
 }
 
-export function registerMessageHandler(responseType, handler) {
+export function registerResponseHandler(responseType, handler) {
     messageHandlers[responseType] = handler;
 }
 
@@ -62,32 +61,4 @@ export function safeSend(message) {
     }
 }
 
-// Register default message handlers
-registerMessageHandler('Joined', (response) => {
-    handleJoinResponse(response);
-    updatePlayers(response);
-    updateLeaderboard();
-    renderGame(true);
-});
-
-registerMessageHandler('Updated', (response) => {
-    updatePlayers(response);
-    updateLeaderboard();
-    renderGame(true);
-});
-
-registerMessageHandler('Uncovered', (response) => {
-    if (response.players) {
-        updatePlayersFromServer(response.players);
-    }
-    updateLeaderboard();
-    renderGame(false);
-});
-
-registerMessageHandler('Error', (response) => {
-    console.error('Error:', response.message);
-});
-
-registerMessageHandler('NicknameUpdated', (response) => {
-    updatePlayerName(response.player_id, response.new_name);
-});
+registerResponseHandlers();

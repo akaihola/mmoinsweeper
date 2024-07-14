@@ -11,7 +11,7 @@ let isDragging = false;
 let lastPosX = 0;
 let lastPosY = 0;
 
-export function initializeEventListeners(canvas) {
+export function initializeUiEventListeners(canvas) {
     canvas.addEventListener('mousedown', (event) => {
         isDragging = true;
         lastPosX = event.clientX;

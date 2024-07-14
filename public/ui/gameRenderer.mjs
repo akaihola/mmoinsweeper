@@ -1,6 +1,6 @@
 import {TILE_SIZE} from './defaults.mjs';
 import {gameState} from '../game_state.mjs';
-import {uiState, updateUIState} from './uiState.mjs';
+import {uiState} from './uiState.mjs';
 import {renderTile} from './tileRenderer.mjs';
 import {createCoveredTilePattern} from './coveredTilePattern.mjs';
 
@@ -29,29 +29,3 @@ export function renderGame(clear) {
     });
 }
 
-export function handleJoinResponse(response) {
-    gameState.playing = true;
-    gameState.player_id = response.player_id;
-    gameState.token = response.token;
-    localStorage.setItem('playerToken', response.token);
-    updateUIState({
-        view_left: TILE_SIZE * response.update_area[0][0],
-        view_top: TILE_SIZE * response.update_area[0][1],
-        view_right: TILE_SIZE * response.update_area[1][0],
-        view_bottom: TILE_SIZE * response.update_area[1][1]
-    });
-    updatePlayers(response);
-}
-
-export function updatePlayers(response) {
-    Object.entries(response.players).forEach(([playerIdStr, player]) => {
-        const playerId = parseInt(playerIdStr);
-        gameState.players[playerId] = {
-            id: playerId,
-            join_time: new Date(1000 * player.join_time),
-            color: player.color,
-            score: player.score,
-            name: player.name || 'Anonymous'
-        };
-    });
-}
