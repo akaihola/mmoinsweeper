@@ -1,13 +1,10 @@
-import { updateLeaderboard, updatePlayerName } from './leaderboard.mjs';
-import { gameState } from './game_state.mjs';
-import { renderGame, handleJoinResponse, updatePlayers } from './ui/gameRenderer.mjs';
+import {updateLeaderboard, updatePlayerName} from './leaderboard.mjs';
+import {gameState} from './game_state.mjs';
+import {handleJoinResponse, renderGame, updatePlayers} from './ui/gameRenderer.mjs';
+import {log} from "./utils.mjs";
 
 let ws;
 const messageHandlers = {};
-
-function log(...args) {
-    console.log(new Date().toISOString().substring(11, 23), ...args);
-}
 
 export function initializeWebSocket(joinAction) {
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';

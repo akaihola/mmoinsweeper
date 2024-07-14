@@ -1,5 +1,6 @@
 import { gameState, getVisibleArea } from './game_state.mjs';
 import { safeSend } from './websocket.mjs';
+import {log} from "./utils.mjs";
 
 
 // Leaderboard logic
@@ -63,7 +64,7 @@ export function updateLeaderboard() {
         `;
         nameCell.style.backgroundColor = player.color;
         nameCell.style.color = 'black';
-        console.log(`Add player ${player.id} to leaderboard. You are player ${gameState.player_id}.`);
+        log('Add player', player.id, 'to leaderboard. You are player', gameState.player_id);
         if (player.id === gameState.player_id) {
             nameCell.querySelector('.edit-name').addEventListener('click', () => editPlayerName(player));
         }
