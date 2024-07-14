@@ -10,14 +10,14 @@ let isDragging = false;
 let lastPosX = 0;
 let lastPosY = 0;
 
-export function initializeEventListeners(canvas, renderGame) {
+export function initializeEventListeners(canvas) {
     canvas.addEventListener('mousedown', (event) => {
         isDragging = true;
         lastPosX = event.clientX;
         lastPosY = event.clientY;
     });
 
-    canvas.addEventListener('mousemove', (event) => handleMove(event, renderGame));
+    canvas.addEventListener('mousemove', handleMove);
 
     canvas.addEventListener('mouseup', () => {
         isDragging = false;
@@ -67,11 +67,11 @@ function handleMove(event, renderGame) {
     }
 }
 
-function handleClick(event, ws) {
+function handleClick(event) {
     const x = event.clientX || event.pageX || mouseX;
     const y = event.clientY || event.pageY || mouseY;
     console.log('Click event registered, position:', x, y, 'event:', event.type);
-    safeSend(ws, JSON.stringify({
+    safeSend(JSON.stringify({
         action_type: 'Uncover',
         player_id: gameState.player_id,
         token: gameState.token,

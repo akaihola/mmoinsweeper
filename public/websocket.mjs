@@ -9,21 +9,12 @@ function log(...args) {
     console.log(new Date().toISOString().substring(11, 23), ...args);
 }
 
-export function initializeWebSocket() {
+export function initializeWebSocket(joinAction) {
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     ws = new WebSocket(`${wsProtocol}//${window.location.host}/ws`);
 
     ws.addEventListener('open', () => {
-        const horizontalTiles = Math.floor(canvas.width / TILE_SIZE);
-        const verticalTiles = Math.floor(canvas.height / TILE_SIZE);
-
-        safeSend(JSON.stringify({
-            action_type: 'Join',
-            visible_area: [
-                [Math.floor(-horizontalTiles / 2), Math.ceil(-verticalTiles / 2)],  // left, top
-                [Math.floor(horizontalTiles / 2), Math.ceil(verticalTiles / 2)]  // right, bottom
-            ]
-        }));
+        safeSend(JSON.stringify(joinAction));
     });
 
     ws.addEventListener('close', (event) => {
