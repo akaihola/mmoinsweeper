@@ -10,12 +10,14 @@ const { canvas, ctx } = initializeCanvas();
 initializeRenderer(ctx);
 const horizontalTiles = Math.floor(canvas.width / TILE_SIZE);
 const verticalTiles = Math.floor(canvas.height / TILE_SIZE);
+const storedToken = localStorage.getItem('playerToken');
 initializeWebSocket({
     action_type: 'Join',
     visible_area: [
         [Math.floor(-horizontalTiles / 2), Math.ceil(-verticalTiles / 2)],  // left, top
         [Math.floor(horizontalTiles / 2), Math.ceil(verticalTiles / 2)]  // right, bottom
-    ]
+    ],
+    token: storedToken
 });
 initializeEventListeners(canvas);
 
