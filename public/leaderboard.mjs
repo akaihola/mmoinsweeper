@@ -149,7 +149,7 @@ function editPlayerName(player) {
 export function updatePlayerName(playerId, newName) {
     if (gameState.players[playerId]) {
         gameState.players[playerId].name = newName || 'Anonymous';
-        console.log(`Updated player ${playerId} name to: ${gameState.players[playerId].name}`);
+        log(`Updated player ${playerId} name to: ${gameState.players[playerId].name}`);
         updateLeaderboard();
     } else {
         console.error(`Player ${playerId} not found in gameState`);
@@ -157,6 +157,7 @@ export function updatePlayerName(playerId, newName) {
 }
 
 export function updatePlayersFromServer(players) {
+    let updated = false;
     Object.entries(players).forEach(([playerIdStr, player]) => {
         const playerId = parseInt(playerIdStr);
         if (!gameState.players[playerId]) {
@@ -167,14 +168,25 @@ export function updatePlayersFromServer(players) {
                 score: player.score,
                 name: player.name || 'Anonymous'
             };
+            updated = true;
         } else {
             // Update existing player data
-            gameState.players[playerId].color = player.color;
-            gameState.players[playerId].score = player.score;
-            if (player.name) {
+            if (gameState.players[playerId].color !== player.color) {
+                gameState.players[playerId].color = player.color;
+                updated = true;
+            }
+            if (gameState.players[playerId].score !== player.score) {
+                gameState.players[playerId].score = player.score;
+                updated = true;
+            }
+            if (player.name && gameState.players[playerId].name !== player.name) {
                 gameState.players[playerId].name = player.name;
+                updated = true;
             }
         }
     });
-    updateLeaderboard();
+    if (updated) {
+        log('Players updated from server, refreshing leaderboard');
+        updateLeaderboard();
+    }
 }

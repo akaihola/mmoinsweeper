@@ -56,7 +56,7 @@ export function registerMessageHandler(responseType, handler) {
 export function safeSend(message) {
     if (ws.readyState === WebSocket.OPEN) {
         ws.send(message);
-        console.log('Message sent to server', message);
+        log('Message sent to server', message);
     } else {
         console.error('WebSocket is not open. ReadyState:', ws.readyState);
     }
