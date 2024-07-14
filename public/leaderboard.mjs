@@ -58,13 +58,14 @@ export function updateLeaderboard() {
         const row = leaderboardTable.insertRow();
         row.insertCell(0).innerText = index + 1; // Rank
         const nameCell = row.insertCell(1);
+        const playerName = gameState.players[player.id].name || 'Anonymous';
         nameCell.innerHTML = `
-            <span class="player-name">${gameState.players[player.id].name || 'Anonymous'}</span>
+            <span class="player-name">${playerName}</span>
             ${player.id === gameState.player_id ? '<span class="edit-name">✎</span>' : ''}
         `;
         nameCell.style.backgroundColor = player.color;
         nameCell.style.color = 'black';
-        log('Add player', player.id, 'to leaderboard. You are player', gameState.player_id);
+        log('Add player', player.id, 'to leaderboard. Name:', playerName, 'You are player', gameState.player_id);
         if (player.id === gameState.player_id) {
             nameCell.querySelector('.edit-name').addEventListener('click', () => editPlayerName(player));
         }
@@ -148,6 +149,9 @@ function editPlayerName(player) {
 export function updatePlayerName(playerId, newName) {
     if (gameState.players[playerId]) {
         gameState.players[playerId].name = newName || 'Anonymous';
+        console.log(`Updated player ${playerId} name to: ${gameState.players[playerId].name}`);
         updateLeaderboard();
+    } else {
+        console.error(`Player ${playerId} not found in gameState`);
     }
 }
