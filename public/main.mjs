@@ -48,7 +48,7 @@ ws.onmessage = (event) => {
     const response = parsedResponse[responseType];
     log('Message received from server', event.data.length, 'bytes', response);
     Object.entries(response.tiles).forEach(([positionString, tile]) => {
-        console.log(positionString, tile);
+        // log('Update tile', positionString, 'as', tile);
         gameState.tiles[positionString] = tile;
     });
     switch (responseType) {
