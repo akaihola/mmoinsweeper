@@ -1,4 +1,4 @@
-import {gameState, getVisibleArea} from './game_state.mjs';
+import {gameState} from './game_state.mjs';
 import {log} from "./utils.mjs";
 import {safeSend} from './net/websocket.mjs';
 
@@ -65,7 +65,7 @@ export function updateLeaderboard() {
         const row = leaderboardTable.insertRow();
         row.insertCell(0).innerText = index + 1; // Rank
         const nameCell = row.insertCell(1);
-        const playerName = gameState.players[player.id].name || 'Anonymous';
+        const playerName = player.name || 'Anonymous';
         nameCell.innerHTML = `
             <span class="player-name">${playerName}</span>
             ${player.id === gameState.player_id ? '<span class="edit-name">✎</span>' : ''}
@@ -98,42 +98,10 @@ function getSortedPlayers(sortBy) {
 }
 
 function getVisiblePlayers(players) {
-    const visiblePlayers = new Set();
-    const currentPlayer = gameState.players[gameState.player_id];
-    const currentPlayerIndex = players.findIndex(player => player.id === currentPlayer.id);
-
-    // Add players above and below the current player
-    if (currentPlayerIndex > 0) {
-        visiblePlayers.add(players[currentPlayerIndex - 1]);
-    }
-    if (currentPlayerIndex < players.length - 1) {
-        visiblePlayers.add(players[currentPlayerIndex + 1]);
-    }
-
-    // Add top player
-    visiblePlayers.add(players[0]);
-
-    // Add current player
-    visiblePlayers.add(currentPlayer);
-
-    // Add players visible in the area
-    const visibleArea = getVisibleArea();
-    players.forEach(player => {
-        if (isPlayerVisible(player, visibleArea)) {
-            visiblePlayers.add(player);
-        }
-    });
-
-    return Array.from(visiblePlayers);
+    return players;  // Return all players for now
 }
 
-function isPlayerVisible(player, visibleArea) {
-    return Object.values(gameState.tiles).some(tile => {
-        return tile.player_id === player.id &&
-            tile.x >= visibleArea[0][0] && tile.x <= visibleArea[1][0] &&
-            tile.y >= visibleArea[0][1] && tile.y <= visibleArea[1][1];
-    });
-}
+// This function is not needed for now
 
 function formatTime(joinTime) {
     const totalSeconds = Math.floor((new Date() - joinTime) / 1000);
