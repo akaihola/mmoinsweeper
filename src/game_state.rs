@@ -228,7 +228,14 @@ impl GameState {
         }
     }
 
-    pub fn handle_update_action(&self, area_to_update: Area) -> GameStateResponse {
+    pub fn handle_update_action(&mut self, player_id: u32, area_to_update: Area) -> GameStateResponse {
+        if let Some(player) = self.players.get_mut(&player_id) {
+            player.visible_area = area_to_update;
+        } else {
+            return GameStateResponse::Error {
+                message: format!("Player {} not found", player_id),
+            };
+        }
         let tiles = self.visible_tiles(area_to_update);
         let player_ids = tiles.values().map(|tile| tile.player_id).collect::<Vec<_>>();
         let players = self.players_response(Some(player_ids.as_slice()));
@@ -260,10 +267,16 @@ impl GameState {
         }
     }
 
-    pub fn process_action(&mut self, action: PlayerAction) -> GameStateResponse {
+    pub fn process_action(&mut self, player_id: Option<u32>, action: PlayerAction) -> GameStateResponse {
         match action {
             PlayerAction::Join { visible_area, token } => self.handle_join_action(visible_area, token),
-            PlayerAction::Update { area_to_update } => self.handle_update_action(area_to_update),
+            PlayerAction::Update { area_to_update } => if let Some(id) = player_id {
+                self.handle_update_action(id, area_to_update)
+            } else {
+                GameStateResponse::Error {
+                    message: "Can't pan view before joining the game".to_string(),
+                }
+            }
             PlayerAction::Uncover { player_id, token, position, visible_area } => {
                 self.handle_uncover_action(player_id, token, position, visible_area)
             },
