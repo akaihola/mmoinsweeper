@@ -1,4 +1,4 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
@@ -163,7 +163,7 @@ impl GameState {
         let tile = self.board.get(&position).unwrap();
         let response = GameStateResponse::Uncovered {
             tiles: self.visible_tiles((position, position)),
-            players: self.players_response(Some(&[tile.player_id])),
+            players: self.players_response(Some(&HashSet::from([tile.player_id]))),
         };
         let message = serde_json::to_string(&response).unwrap();
         for (_, player) in &self.players {
@@ -237,8 +237,8 @@ impl GameState {
             };
         }
         let tiles = self.visible_tiles(area_to_update);
-        let player_ids = tiles.values().map(|tile| tile.player_id).collect::<Vec<_>>();
-        let players = self.players_response(Some(player_ids.as_slice()));
+        let player_ids: HashSet<_> = tiles.values().map(|tile| tile.player_id).collect();
+        let players = self.players_response(Some(&player_ids));
         GameStateResponse::Updated { tiles, players }
     }
 
@@ -263,7 +263,7 @@ impl GameState {
         }
         GameStateResponse::Uncovered {
             tiles: self.visible_tiles(visible_area),
-            players: self.players_response(Some(&[player_id])),
+            players: self.players_response(Some(&HashSet::from([player_id]))),
         }
     }
 
@@ -294,7 +294,7 @@ impl GameState {
         }
     }
 
-    pub fn players_response(&self, player_ids: Option<&[u32]>) -> HashMap<u32, ClientPlayer> {
+    pub fn players_response(&self, player_ids: Option<&HashSet<u32>>) -> HashMap<u32, ClientPlayer> {
         self.players.iter().filter_map(|(&id, player)| {
             if player_ids.map_or(true, |ids| ids.contains(&id)) {
                 Some((id, ClientPlayer {
