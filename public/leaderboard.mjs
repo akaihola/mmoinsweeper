@@ -3,53 +3,60 @@ import {log} from "./utils.mjs";
 import {safeSend} from './net/websocket.mjs';
 
 
-// Leaderboard logic
-const leaderboardContainer = document.getElementById('leaderboard-container');
-const leaderboardHandle = document.getElementById('leaderboard-handle');
-const leaderboardTable = document.getElementById('leaderboard').getElementsByTagName('tbody')[0];
+let leaderboardContainer;
+let leaderboardHandle;
+let leaderboardTable;
 let sortBy = 'score'; // Default sorting by score
 let sortOrder = 'asc'; // Default sorting order ascending
 
-// Ensure the handle is always visible
-function updateHandlePosition() {
-    if (leaderboardContainer.style.left === '0px') {
-        leaderboardHandle.style.left = '300px';
-    } else {
-        leaderboardHandle.style.left = '0px';
+
+export function initializeLeaderboard() {
+    // Leaderboard logic
+    leaderboardContainer = document.getElementById('leaderboard-container');
+    leaderboardHandle = document.getElementById('leaderboard-handle');
+    leaderboardTable = document.getElementById('leaderboard').getElementsByTagName('tbody')[0];
+
+    // Ensure the handle is always visible
+    function updateHandlePosition() {
+        if (leaderboardContainer.style.left === '0px') {
+            leaderboardHandle.style.left = '300px';
+        } else {
+            leaderboardHandle.style.left = '0px';
+        }
     }
+
+    leaderboardHandle.addEventListener('click', () => {
+        if (leaderboardContainer.style.left === '0px') {
+            leaderboardContainer.style.left = '-300px';
+        } else {
+            leaderboardContainer.style.left = '0px';
+        }
+        updateHandlePosition();
+    });
+
+    // Initialize the leaderboard position
+    leaderboardContainer.style.left = '-300px';
+    updateHandlePosition(); // Call this initially to set the correct position
+
+    // Update handle position on window resize
+    window.addEventListener('resize', updateHandlePosition);
+
+    // MutationObserver to watch for changes in leaderboardContainer's style
+    const observer = new MutationObserver(updateHandlePosition);
+    observer.observe(leaderboardContainer, {attributes: true, attributeFilter: ['style']});
+
+    document.getElementById('score-header').addEventListener('click', () => {
+        sortBy = 'score';
+        sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+        updateLeaderboard();
+    });
+
+    document.getElementById('tph-header').addEventListener('click', () => {
+        sortBy = 'tph';
+        sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+        updateLeaderboard();
+    });
 }
-
-leaderboardHandle.addEventListener('click', () => {
-    if (leaderboardContainer.style.left === '0px') {
-        leaderboardContainer.style.left = '-300px';
-    } else {
-        leaderboardContainer.style.left = '0px';
-    }
-    updateHandlePosition();
-});
-
-// Initialize the leaderboard position
-leaderboardContainer.style.left = '-300px';
-updateHandlePosition(); // Call this initially to set the correct position
-
-// Update handle position on window resize
-window.addEventListener('resize', updateHandlePosition);
-
-// MutationObserver to watch for changes in leaderboardContainer's style
-const observer = new MutationObserver(updateHandlePosition);
-observer.observe(leaderboardContainer, {attributes: true, attributeFilter: ['style']});
-
-document.getElementById('score-header').addEventListener('click', () => {
-    sortBy = 'score';
-    sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
-    updateLeaderboard();
-});
-
-document.getElementById('tph-header').addEventListener('click', () => {
-    sortBy = 'tph';
-    sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
-    updateLeaderboard();
-});
 
 export function updateLeaderboard() {
     const visiblePlayers = getVisiblePlayers(getSortedPlayers(sortBy));
