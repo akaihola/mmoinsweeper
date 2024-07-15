@@ -1,4 +1,4 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
@@ -237,8 +237,8 @@ impl GameState {
             };
         }
         let tiles = self.visible_tiles(area_to_update);
-        let player_ids = tiles.values().map(|tile| tile.player_id).collect::<Vec<_>>();
-        let players = self.players_response(Some(player_ids.as_slice()));
+        let player_ids: HashSet<_> = tiles.values().map(|tile| tile.player_id).collect();
+        let players = self.players_response(Some(&player_ids.into_iter().collect::<Vec<_>>()));
         GameStateResponse::Updated { tiles, players }
     }
 
