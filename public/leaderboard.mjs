@@ -91,27 +91,33 @@ function getSortedPlayers(sortBy) {
 }
 
 function getVisiblePlayers(players) {
-    const visiblePlayers = [];
+    const visiblePlayers = new Set();
     const currentPlayer = gameState.players[gameState.player_id];
     const currentPlayerIndex = players.findIndex(player => player.id === currentPlayer.id);
 
+    // Add players above and below the current player
     if (currentPlayerIndex > 0) {
-        visiblePlayers.push(players[currentPlayerIndex - 1]); // Player above
+        visiblePlayers.add(players[currentPlayerIndex - 1]);
     }
-    visiblePlayers.push(currentPlayer); // Current player
     if (currentPlayerIndex < players.length - 1) {
-        visiblePlayers.push(players[currentPlayerIndex + 1]); // Player below
+        visiblePlayers.add(players[currentPlayerIndex + 1]);
     }
-    visiblePlayers.push(players[0]); // Top player
 
+    // Add top player
+    visiblePlayers.add(players[0]);
+
+    // Add current player
+    visiblePlayers.add(currentPlayer);
+
+    // Add players visible in the area
     const visibleArea = getVisibleArea();
     players.forEach(player => {
-        if (player.id !== currentPlayer.id && isPlayerVisible(player, visibleArea)) {
-            visiblePlayers.push(player);
+        if (isPlayerVisible(player, visibleArea)) {
+            visiblePlayers.add(player);
         }
     });
 
-    return visiblePlayers;
+    return Array.from(visiblePlayers);
 }
 
 function isPlayerVisible(player, visibleArea) {
