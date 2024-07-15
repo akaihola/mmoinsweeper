@@ -399,6 +399,39 @@ impl GameState {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_handle_update_action_updates_visible_area() {
+        let mut game_state = GameState::new();
+
+        // Add a player
+        let join_action = PlayerAction::Join {
+            visible_area: ((0, 0), (10, 10)),
+            token: None,
+        };
+        let join_response = game_state.process_action(None, join_action);
+
+        let player_id = match join_response {
+            GameStateResponse::Joined { player_id, .. } => player_id,
+            _ => panic!("Expected Joined response"),
+        };
+
+        // Update the player's visible area
+        let new_area = ((5, 5), (15, 15));
+        let update_action = PlayerAction::Update {
+            area_to_update: new_area,
+        };
+        game_state.process_action(Some(player_id), update_action);
+
+        // Check if the player's visible area was updated
+        let updated_player = game_state.players.get(&player_id).unwrap();
+        assert_eq!(updated_player.visible_area, new_area, "Player's visible area should be updated");
+    }
+}
+
 // iterate over all tiles around a position, but not the tile itself
 fn tiles_around(position: Position) -> impl Iterator<Item=Position> {
     (-1..=1).flat_map(move |dx|
