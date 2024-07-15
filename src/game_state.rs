@@ -228,7 +228,14 @@ impl GameState {
         }
     }
 
-    pub fn handle_update_action(&self, area_to_update: Area) -> GameStateResponse {
+    pub fn handle_update_action(&mut self, player_id: u32, area_to_update: Area) -> GameStateResponse {
+        if let Some(player) = self.players.get_mut(&player_id) {
+            player.visible_area = area_to_update;
+        } else {
+            return GameStateResponse::Error {
+                message: format!("Player {} not found", player_id),
+            };
+        }
         let tiles = self.visible_tiles(area_to_update);
         let player_ids = tiles.values().map(|tile| tile.player_id).collect::<Vec<_>>();
         let players = self.players_response(Some(player_ids.as_slice()));
@@ -260,10 +267,16 @@ impl GameState {
         }
     }
 
-    pub fn process_action(&mut self, action: PlayerAction) -> GameStateResponse {
+    pub fn process_action(&mut self, player_id: Option<u32>, action: PlayerAction) -> GameStateResponse {
         match action {
             PlayerAction::Join { visible_area, token } => self.handle_join_action(visible_area, token),
-            PlayerAction::Update { area_to_update } => self.handle_update_action(area_to_update),
+            PlayerAction::Update { area_to_update } => if let Some(id) = player_id {
+                self.handle_update_action(id, area_to_update)
+            } else {
+                GameStateResponse::Error {
+                    message: "Can't pan view before joining the game".to_string(),
+                }
+            }
             PlayerAction::Uncover { player_id, token, position, visible_area } => {
                 self.handle_uncover_action(player_id, token, position, visible_area)
             },
@@ -383,6 +396,39 @@ impl GameState {
 
     pub fn adjacent_mines(&self, position: Position) -> i8 {
         tiles_around(position).filter(|&pos| self.is_mine(pos)).count() as i8
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_handle_update_action_updates_visible_area() {
+        let mut game_state = GameState::new();
+
+        // Add a player
+        let join_action = PlayerAction::Join {
+            visible_area: ((0, 0), (10, 10)),
+            token: None,
+        };
+        let join_response = game_state.process_action(None, join_action);
+
+        let player_id = match join_response {
+            GameStateResponse::Joined { player_id, .. } => player_id,
+            _ => panic!("Expected Joined response"),
+        };
+
+        // Update the player's visible area
+        let new_area = ((5, 5), (15, 15));
+        let update_action = PlayerAction::Update {
+            area_to_update: new_area,
+        };
+        game_state.process_action(Some(player_id), update_action);
+
+        // Check if the player's visible area was updated
+        let updated_player = game_state.players.get(&player_id).unwrap();
+        assert_eq!(updated_player.visible_area, new_area, "Player's visible area should be updated");
     }
 }
 

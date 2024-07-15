@@ -55,7 +55,7 @@ async fn handle_connection(ws: warp::ws::WebSocket, game_state: Arc<Mutex<GameSt
             if let Ok(text) = message.to_str() {
                 let action: PlayerAction = serde_json::from_str(text).unwrap();
                 let mut game_state = game_state.lock().await;
-                let response = game_state.process_action(action.clone());
+                let response = game_state.process_action(player_id, action.clone());
 
                 if player_id.is_none() {
                     if let PlayerAction::Join { .. } = action {
