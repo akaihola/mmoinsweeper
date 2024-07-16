@@ -97,34 +97,35 @@ function getSortedPlayers(sortBy) {
     return players;
 }
 
-function getVisiblePlayers(players) {
+function getVisiblePlayers(sortedPlayers) {
+    if (sortedPlayers.length < 10) return sortedPlayers;
     const visiblePlayers = new Set();
     const currentPlayer = gameState.players[gameState.player_id];
-    const currentPlayerIndex = players.findIndex(player => player.id === currentPlayer.id);
+    const currentPlayerIndex = sortedPlayers.findIndex(player => player.id === currentPlayer.id);
 
     // Add players above and below the current player
     if (currentPlayerIndex > 0) {
-        visiblePlayers.add(players[currentPlayerIndex - 1]);
+        visiblePlayers.add(sortedPlayers[currentPlayerIndex - 1]);
     }
-    if (currentPlayerIndex < players.length - 1) {
-        visiblePlayers.add(players[currentPlayerIndex + 1]);
+    if (currentPlayerIndex < sortedPlayers.length - 1) {
+        visiblePlayers.add(sortedPlayers[currentPlayerIndex + 1]);
     }
 
     // Add top player
-    visiblePlayers.add(players[0]);
+    visiblePlayers.add(sortedPlayers[0]);
 
     // Add current player
     visiblePlayers.add(currentPlayer);
 
     // Add players visible in the area
     const visibleArea = getVisibleArea();
-    players.forEach(player => {
+    sortedPlayers.forEach(player => {
         if (isPlayerVisible(player, visibleArea)) {
             visiblePlayers.add(player);
         }
     });
 
-    return Array.from(visiblePlayers);
+    return sortedPlayers.filter(player => visiblePlayers.has(player));
 }
 
 function isPlayerVisible(player, visibleArea) {
