@@ -8,6 +8,8 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 use warp::ws::Message;
 
+use crate::player_color::get_player_color_hex;
+
 pub type TileCoordinate = i64;
 pub type Position = (TileCoordinate, TileCoordinate);
 pub type PositionString = String;
@@ -38,7 +40,6 @@ pub struct DbPlayer {
     pub token: String,
     pub join_time: ServerTime,
     pub game_over: bool,
-    pub color: String,
     pub score: u32,
     pub sender: Option<mpsc::UnboundedSender<Message>>,
     pub visible_area: Area,
@@ -235,7 +236,6 @@ impl GameState {
             DbPlayer {
                 join_time: seconds_since(self.epoch),
                 token: token.clone(),
-                color: format!("#{:06x}", rand::thread_rng().gen_range(0..0xFFFFFF)),
                 score: 0,
                 game_over: false,
                 sender: None,
@@ -372,7 +372,7 @@ impl GameState {
                         id,
                         ClientPlayer {
                             join_time: self.epoch + player.join_time,
-                            color: player.color.clone(),
+                            color: get_player_color_hex(id),
                             score: player.score,
                             name: player.name.clone(),
                         },
