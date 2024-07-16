@@ -13,6 +13,7 @@ use game_state::{GameState, PlayerAction};
 use crate::game_state::GameStateResponse;
 
 mod game_state;
+mod player_color;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
