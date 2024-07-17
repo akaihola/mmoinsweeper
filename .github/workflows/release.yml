@@ -1,28 +1,31 @@
-name: Release
+name: CI/CD
 
 on:
   push:
     tags:
       - 'v*'
+  pull_request:
+    types: [ opened, synchronize ]
 
 jobs:
   release:
     name: Build and Release
     runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Rust
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: stable
-          
+
       - name: Build
         run: cargo build --release
-        
+
       - name: Generate Changelog
         run: |
           echo "# Changelog" > ${{ github.workspace }}-CHANGELOG.md
@@ -34,13 +37,9 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Update version in static content
+      - name: Update version in static content and create archive
         run: |
           python .github/scripts/update_version.py
-
-      - name: Create static content archive
-        run: |
-          cd public && zip -r ../mmoinsweeper-static-content.zip .
 
       - name: Release
         uses: softprops/action-gh-release@v2
@@ -56,3 +55,35 @@ jobs:
           make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  pr_build_and_upload:
+    name: PR Build and Upload
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+
+      - name: Build
+        run: cargo build --release
+
+      - name: Get branch name
+        id: branch_name
+        run: echo "::set-output name=branch::${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
+
+      - name: Upload to production server
+        env:
+          HOST: ${{ secrets.PROD_HOST }}
+          USER: ${{ secrets.PROD_SERVICE_USER }}
+          KEY: ${{ secrets.PROD_SERVICE_USER_SSH_KEY }}
+          BRANCH: ${{ steps.branch_name.outputs.branch }}
+        run: |
+          echo "$KEY" > ssh_key
+          chmod 600 ssh_key
+          scp -i ssh_key -o StrictHostKeyChecking=no ./target/release/mmoinsweeper $USER@$HOST:~/mmoinsweeper-$BRANCH
+          rm ssh_key
