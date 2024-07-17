@@ -1,4 +1,4 @@
-name: CI/CD
+name: Release
 
 on:
   push:
@@ -22,6 +22,11 @@ jobs:
         with:
           profile: minimal
           toolchain: stable
+          override: true
+          components: rustfmt, clippy
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
 
       - name: Build
         run: cargo build --release
@@ -68,6 +73,11 @@ jobs:
         with:
           profile: minimal
           toolchain: stable
+          override: true
+          components: rustfmt, clippy
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
 
       - name: Build
         run: cargo build --release
