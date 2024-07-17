@@ -1,14 +1,17 @@
-name: Release
+name: CI/CD
 
 on:
   push:
     tags:
       - 'v*'
+  pull_request:
+    types: [opened, synchronize]
 
 jobs:
   release:
     name: Build and Release
     runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: write
     steps:
@@ -56,3 +59,34 @@ jobs:
           make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  pr_build_and_upload:
+    name: PR Build and Upload
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          
+      - name: Build
+        run: cargo build --release
+        
+      - name: Get branch name
+        id: branch_name
+        run: echo "::set-output name=branch::${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
+        
+      - name: Upload to production server
+        env:
+          PROD_HOST: ${{ secrets.PROD_HOST }}
+          PROD_SERVICE_USER: ${{ secrets.PROD_SERVICE_USER }}
+          PROD_SERVICE_USER_SSH_KEY: ${{ secrets.PROD_SERVICE_USER_SSH_KEY }}
+        run: |
+          echo "$PROD_SERVICE_USER_SSH_KEY" > ssh_key
+          chmod 600 ssh_key
+          scp -i ssh_key -o StrictHostKeyChecking=no ./target/release/mmoinsweeper $PROD_SERVICE_USER@$PROD_HOST:~/mmoinsweeper-${{ steps.branch_name.outputs.branch }}
+          rm ssh_key
