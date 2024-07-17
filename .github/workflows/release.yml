@@ -5,7 +5,7 @@ on:
     tags:
       - 'v*'
   pull_request:
-    types: [opened, synchronize]
+    types: [ opened, synchronize ]
 
 jobs:
   release:
@@ -16,16 +16,16 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Rust
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: stable
-          
+
       - name: Build
         run: cargo build --release
-        
+
       - name: Generate Changelog
         run: |
           echo "# Changelog" > ${{ github.workspace }}-CHANGELOG.md
@@ -62,20 +62,20 @@ jobs:
     if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Rust
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: stable
-          
+
       - name: Build
         run: cargo build --release
-        
+
       - name: Get branch name
         id: branch_name
         run: echo "::set-output name=branch::${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
-        
+
       - name: Upload to production server
         env:
           HOST: ${{ secrets.PROD_HOST }}
