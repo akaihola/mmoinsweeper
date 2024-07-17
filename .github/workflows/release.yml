@@ -78,11 +78,12 @@ jobs:
         
       - name: Upload to production server
         env:
-          PROD_HOST: ${{ secrets.PROD_HOST }}
-          PROD_SERVICE_USER: ${{ secrets.PROD_SERVICE_USER }}
-          PROD_SERVICE_USER_SSH_KEY: ${{ secrets.PROD_SERVICE_USER_SSH_KEY }}
+          HOST: ${{ secrets.PROD_HOST }}
+          USER: ${{ secrets.PROD_SERVICE_USER }}
+          KEY: ${{ secrets.PROD_SERVICE_USER_SSH_KEY }}
+          BRANCH: ${{ steps.branch_name.outputs.branch }}
         run: |
-          echo "$PROD_SERVICE_USER_SSH_KEY" > ssh_key
+          echo "$KEY" > ssh_key
           chmod 600 ssh_key
-          scp -i ssh_key -o StrictHostKeyChecking=no ./target/release/mmoinsweeper $PROD_SERVICE_USER@$PROD_HOST:~/mmoinsweeper-${{ steps.branch_name.outputs.branch }}
+          scp -i ssh_key -o StrictHostKeyChecking=no ./target/release/mmoinsweeper $USER@$HOST:~/mmoinsweeper-$BRANCH
           rm ssh_key
