@@ -52,7 +52,7 @@ jobs:
           body_path: ${{ github.workspace }}-CHANGELOG.md
           files: |
             ./target/release/mmoinsweeper
-            ${{ RUNNER_TEMP }}/mmoinsweeper-static-content.zip
+            ${{ env.RUNNER_TEMP }}/mmoinsweeper-static-content.zip
           draft: false
           prerelease: false
           fail_on_unmatched_files: true
