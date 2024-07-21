@@ -6,6 +6,7 @@ import {initializeUiEventListeners} from './ui/uiEventHandlers.mjs';
 import {initializeRenderer} from './ui/gameRenderer.mjs';
 import {initializeWebSocket} from './net/websocket.mjs';
 import {getJoinAction, registerResponseHandlers} from "./net/serverProtocol.mjs";
+import {initializeLeaderboard} from "./leaderboard.mjs";
 
 const {canvas, ctx} = initializeCanvas();
 initializeRenderer(ctx);
@@ -16,6 +17,7 @@ const joinAction = getJoinAction(horizontalTiles, verticalTiles, gameState.token
 initializeWebSocket(joinAction);
 registerResponseHandlers();
 initializeUiEventListeners(canvas);
+initializeLeaderboard();
 
 // FOR DEBUGGING:
 window.getVisibleArea = getVisibleArea;

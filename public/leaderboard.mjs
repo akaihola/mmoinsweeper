@@ -1,55 +1,62 @@
-import {gameState, getVisibleArea} from './game_state.mjs';
+import {gameState} from './game_state.mjs';
 import {log} from "./utils.mjs";
 import {safeSend} from './net/websocket.mjs';
 
 
-// Leaderboard logic
-const leaderboardContainer = document.getElementById('leaderboard-container');
-const leaderboardHandle = document.getElementById('leaderboard-handle');
-const leaderboardTable = document.getElementById('leaderboard').getElementsByTagName('tbody')[0];
+let leaderboardContainer;
+let leaderboardHandle;
+let leaderboardTable;
 let sortBy = 'score'; // Default sorting by score
 let sortOrder = 'asc'; // Default sorting order ascending
 
-// Ensure the handle is always visible
-function updateHandlePosition() {
-    if (leaderboardContainer.style.left === '0px') {
-        leaderboardHandle.style.left = '300px';
-    } else {
-        leaderboardHandle.style.left = '0px';
+
+export function initializeLeaderboard() {
+    // Leaderboard logic
+    leaderboardContainer = document.getElementById('leaderboard-container');
+    leaderboardHandle = document.getElementById('leaderboard-handle');
+    leaderboardTable = document.getElementById('leaderboard').getElementsByTagName('tbody')[0];
+
+    // Ensure the handle is always visible
+    function updateHandlePosition() {
+        if (leaderboardContainer.style.left === '0px') {
+            leaderboardHandle.style.left = '300px';
+        } else {
+            leaderboardHandle.style.left = '0px';
+        }
     }
+
+    leaderboardHandle.addEventListener('click', () => {
+        if (leaderboardContainer.style.left === '0px') {
+            leaderboardContainer.style.left = '-300px';
+        } else {
+            leaderboardContainer.style.left = '0px';
+        }
+        updateHandlePosition();
+    });
+
+    // Initialize the leaderboard position
+    leaderboardContainer.style.left = '-300px';
+    updateHandlePosition(); // Call this initially to set the correct position
+
+    // Update handle position on window resize
+    window.addEventListener('resize', updateHandlePosition);
+
+    // MutationObserver to watch for changes in leaderboardContainer's style
+    const observer = new MutationObserver(updateHandlePosition);
+    observer.observe(leaderboardContainer, {attributes: true, attributeFilter: ['style']});
+
+    document.getElementById('score-header').addEventListener('click', () => {
+        sortBy = 'score';
+        sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+        updateLeaderboard();
+    });
+
+    document.getElementById('tph-header').addEventListener('click', () => {
+        sortBy = 'tph';
+        sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+        updateLeaderboard();
+    });
 }
-
-leaderboardHandle.addEventListener('click', () => {
-    if (leaderboardContainer.style.left === '0px') {
-        leaderboardContainer.style.left = '-300px';
-    } else {
-        leaderboardContainer.style.left = '0px';
-    }
-    updateHandlePosition();
-});
-
-// Initialize the leaderboard position
-leaderboardContainer.style.left = '-300px';
-updateHandlePosition(); // Call this initially to set the correct position
-
-// Update handle position on window resize
-window.addEventListener('resize', updateHandlePosition);
-
-// MutationObserver to watch for changes in leaderboardContainer's style
-const observer = new MutationObserver(updateHandlePosition);
-observer.observe(leaderboardContainer, {attributes: true, attributeFilter: ['style']});
-
-document.getElementById('score-header').addEventListener('click', () => {
-    sortBy = 'score';
-    sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
-    updateLeaderboard();
-});
-
-document.getElementById('tph-header').addEventListener('click', () => {
-    sortBy = 'tph';
-    sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
-    updateLeaderboard();
-});
 
 export function updateLeaderboard() {
     const visiblePlayers = getVisiblePlayers(getSortedPlayers(sortBy));
@@ -58,7 +65,7 @@ export function updateLeaderboard() {
         const row = leaderboardTable.insertRow();
         row.insertCell(0).innerText = index + 1; // Rank
         const nameCell = row.insertCell(1);
-        const playerName = gameState.players[player.id].name || 'Anonymous';
+        const playerName = player.name || 'Anonymous';
         nameCell.innerHTML = `
             <span class="player-name">${playerName}</span>
             ${player.id === gameState.player_id ? '<span class="edit-name">✎</span>' : ''}
@@ -90,28 +97,35 @@ function getSortedPlayers(sortBy) {
     return players;
 }
 
-function getVisiblePlayers(players) {
-    const visiblePlayers = [];
+function getVisiblePlayers(sortedPlayers) {
+    if (sortedPlayers.length < 10) return sortedPlayers;
+    const visiblePlayers = new Set();
     const currentPlayer = gameState.players[gameState.player_id];
-    const currentPlayerIndex = players.findIndex(player => player.id === currentPlayer.id);
+    const currentPlayerIndex = sortedPlayers.findIndex(player => player.id === currentPlayer.id);
 
+    // Add players above and below the current player
     if (currentPlayerIndex > 0) {
-        visiblePlayers.push(players[currentPlayerIndex - 1]); // Player above
+        visiblePlayers.add(sortedPlayers[currentPlayerIndex - 1]);
     }
-    visiblePlayers.push(currentPlayer); // Current player
-    if (currentPlayerIndex < players.length - 1) {
-        visiblePlayers.push(players[currentPlayerIndex + 1]); // Player below
+    if (currentPlayerIndex < sortedPlayers.length - 1) {
+        visiblePlayers.add(sortedPlayers[currentPlayerIndex + 1]);
     }
-    visiblePlayers.push(players[0]); // Top player
 
+    // Add top player
+    visiblePlayers.add(sortedPlayers[0]);
+
+    // Add current player
+    visiblePlayers.add(currentPlayer);
+
+    // Add players visible in the area
     const visibleArea = getVisibleArea();
-    players.forEach(player => {
-        if (player.id !== currentPlayer.id && isPlayerVisible(player, visibleArea)) {
-            visiblePlayers.push(player);
+    sortedPlayers.forEach(player => {
+        if (isPlayerVisible(player, visibleArea)) {
+            visiblePlayers.add(player);
         }
     });
 
-    return visiblePlayers;
+    return sortedPlayers.filter(player => visiblePlayers.has(player));
 }
 
 function isPlayerVisible(player, visibleArea) {
