@@ -49,7 +49,7 @@ process_directory(static_directory, new_version)
 print("Version update complete.")
 
 # Create static content archive
-archive_name = '../mmoinsweeper-static-content.zip'
+archive_name = os.path.join(os.environ["RUNNER_TEMP"], "mmoinsweeper-static-content.zip")
 create_zip_archive("..", static_directory, archive_name)
 
 print(f"Static content archive created: {archive_name}")
