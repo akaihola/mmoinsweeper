@@ -30,12 +30,12 @@ def process_directory(directory, new_version):
                 update_version(file_path, new_version)
 
 
-def create_zip_archive(source_dir, output_filename):
+def create_zip_archive(root_dir, source_dir, output_filename):
     with zipfile.ZipFile(output_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for root, _, files in os.walk(source_dir):
             for file in files:
                 file_path = os.path.join(root, file)
-                arcname = os.path.relpath(file_path, source_dir)
+                arcname = os.path.relpath(file_path, root_dir)
                 zipf.write(file_path, arcname)
 
 
@@ -43,13 +43,13 @@ def create_zip_archive(source_dir, output_filename):
 new_version = datetime.now().strftime("%Y%m%d%H%M%S")
 
 # Specify the root directory to start from
-root_directory = 'public'
-process_directory(root_directory, new_version)
+static_directory = 'public'
+process_directory(static_directory, new_version)
 
 print("Version update complete.")
 
 # Create static content archive
 archive_name = '../mmoinsweeper-static-content.zip'
-create_zip_archive(root_directory, archive_name)
+create_zip_archive("..", static_directory, archive_name)
 
 print(f"Static content archive created: {archive_name}")
