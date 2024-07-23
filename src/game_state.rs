@@ -92,6 +92,7 @@ pub enum GameStateResponse {
     Uncovered {
         tiles: HashMap<PositionString, ClientTile>,
         players: HashMap<u32, ClientPlayer>,
+        error: Option<String>,
     },
     NicknameUpdated {
         player_id: u32,
@@ -126,7 +127,7 @@ impl GameState {
     }
 
     pub fn handle_update_nickname_action(&mut self, player_id: u32, token: String, new_name: String) -> GameStateResponse {
-        if self.player_valid_and_playing(player_id, token) {
+        if self.player_valid_and_playing(player_id, &token) {
             if let Some(player) = self.players.get_mut(&player_id) {
                 player.name = new_name.clone();
                 GameStateResponse::NicknameUpdated {
@@ -164,6 +165,7 @@ impl GameState {
         let response = GameStateResponse::Uncovered {
             tiles: self.visible_tiles((position, position)),
             players: self.players_response(Some(&HashSet::from([tile.player_id]))),
+            error: None,
         };
         let message = serde_json::to_string(&response).unwrap();
         for (_, player) in &self.players {
@@ -243,9 +245,14 @@ impl GameState {
     }
 
     pub fn handle_uncover_action(&mut self, player_id: u32, token: String, position: Position, visible_area: Area) -> GameStateResponse {
-        if self.player_valid_and_playing(player_id, token)
-            && !self.is_uncovered(position)
-            && self.touches_own_area(position, player_id) {
+        let mut error = None;
+        if !self.player_valid_and_playing(player_id, &token) {
+            error = Some(format!("Invalid player {} or token {}", player_id, token));
+        } else if self.is_uncovered(position) {
+            error = Some(format!("Tile already uncovered at {:?} by player {}", position, player_id));
+        } else if !self.touches_own_area(position, player_id) {
+            error = Some(format!("Player {} tried to uncover tile outside their area at {:?}", player_id, position));
+        } else {
             // game started, not yet game over, and tile not yet uncovered
             // so the player can and is allowed to uncover the tile
             self.uncover(position, player_id);
@@ -264,6 +271,7 @@ impl GameState {
         GameStateResponse::Uncovered {
             tiles: self.visible_tiles(visible_area),
             players: self.players_response(Some(&HashSet::from([player_id]))),
+            error: error.map(|message| message.to_string()),
         }
     }
 
@@ -286,7 +294,7 @@ impl GameState {
         }
     }
 
-    pub fn player_valid_and_playing(&self, player_id: u32, token: String) -> bool {
+    pub fn player_valid_and_playing(&self, player_id: u32, token: &str) -> bool {
         if let Some(player) = self.players.get(&player_id) {
             player.token == token && !player.game_over
         } else {
