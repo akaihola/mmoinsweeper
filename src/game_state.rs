@@ -84,6 +84,7 @@ pub enum GameStateResponse {
         update_area: Area,
         tiles: HashMap<PositionString, ClientTile>,
         players: HashMap<u32, ClientPlayer>,
+        reason: Option<String>,
     },
     Updated {
         tiles: HashMap<PositionString, ClientTile>,
@@ -196,14 +197,22 @@ impl GameState {
             ),
         );
 
-        let (token, name) = if let Some(token) = token {
+        let (token, name, reason) = if let Some(token) = token {
             if let Some(existing_player) = self.players.values().find(|p| p.token == token) {
-                (token, existing_player.name.clone())
+                (token, existing_player.name.clone(), None)
             } else {
-                (uuid::Uuid::new_v4().to_string(), format!("Player {}", player_id))
+                (
+                    uuid::Uuid::new_v4().to_string(),
+                    format!("Player {}", player_id),
+                    Some(format!("Player matching token {} not found. Issuing a new token.", token))
+                )
             }
         } else {
-            (uuid::Uuid::new_v4().to_string(), format!("Player {}", player_id))
+            (
+                uuid::Uuid::new_v4().to_string(),
+                format!("Player {}", player_id),
+                Some("No token provided. Issuing a new token.".to_string())
+            )
         };
 
         self.players.insert(player_id, DbPlayer {
@@ -222,11 +231,12 @@ impl GameState {
         self.broadcast_tile(start_position);
 
         GameStateResponse::Joined {
-            player_id: player_id,
-            token: token,
+            player_id,
+            token,
             update_area: visible_area,
             tiles: self.visible_tiles(visible_area),
             players: self.players_response(None),
+            reason,
         }
     }
 
