@@ -200,7 +200,7 @@ impl GameState {
             if let Some(existing_player) = self.players.values().find(|p| p.token == token) {
                 (token, existing_player.name.clone())
             } else {
-                (token, format!("Player {}", player_id))
+                (uuid::Uuid::new_v4().to_string(), format!("Player {}", player_id))
             }
         } else {
             (uuid::Uuid::new_v4().to_string(), format!("Player {}", player_id))
