@@ -9,20 +9,14 @@ use warp::http::header::{CACHE_CONTROL, EXPIRES, HeaderMap, HeaderValue, PRAGMA}
 use warp::ws::Message;
 
 use game_state::{GameState, PlayerAction};
-use tls::show_hostnames;
 
 use crate::game_state::GameStateResponse;
 
 mod game_state;
-mod tls;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    /// Enable TLS
-    #[arg(short, long)]
-    tls: bool,
-
     /// Disable browser caching
     #[arg(short, long)]
     no_cache: bool,
@@ -88,7 +82,7 @@ fn get_headers(no_cache: bool) -> HeaderMap {
     headers
 }
 
-async fn run_server(no_cache: bool, use_tls: bool, port: u16) {
+async fn run_server(no_cache: bool, port: u16) {
     let static_files = warp::fs::dir("public");
     let game_state = Arc::new(Mutex::new(GameState::new()));
 
@@ -106,25 +100,11 @@ async fn run_server(no_cache: bool, use_tls: bool, port: u16) {
 
     let addr = ([0, 0, 0, 0], port);
 
-    if use_tls {
-        warp::serve(routes)
-            .tls()
-            .cert_path("cert.pem")
-            .key_path("key.pem")
-            .run(addr)
-            .await;
-    } else {
-        warp::serve(routes).run(addr).await;
-    }
+    warp::serve(routes).run(addr).await;
 }
 
 #[tokio::main]
 async fn main() {
     let args = Args::parse();
-
-    if args.tls {
-        show_hostnames(args.port);
-    }
-
-    run_server(args.no_cache, args.tls, args.port).await;
+    run_server(args.no_cache, args.port).await;
 }

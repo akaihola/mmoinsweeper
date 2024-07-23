@@ -12,7 +12,6 @@ rand = "0.8"
 futures-util = "0.3.30"
 chrono = "0.4.38"
 warp = { version = "0.3.7", features = ["tls"] }
-openssl = "0.10.64"
 clap = { version = "4.3", features = ["derive"] }
 
 [dependencies.uuid]
