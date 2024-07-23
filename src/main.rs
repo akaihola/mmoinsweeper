@@ -24,6 +24,10 @@ struct Args {
     /// Port number
     #[arg(short, long, default_value_t = 3030)]
     port: u16,
+
+    /// Seed for mine and player start positions
+    #[arg(long)]
+    seed: Option<u32>,
 }
 
 async fn upgrade_ws(ws: warp::ws::Ws, game_state: Arc<Mutex<GameState>>) -> Result<impl warp::Reply, Infallible> {
@@ -82,9 +86,9 @@ fn get_headers(no_cache: bool) -> HeaderMap {
     headers
 }
 
-async fn run_server(no_cache: bool, port: u16) {
+async fn run_server(no_cache: bool, port: u16, seed: Option<u32>) {
     let static_files = warp::fs::dir("public");
-    let game_state = Arc::new(Mutex::new(GameState::new()));
+    let game_state = Arc::new(Mutex::new(GameState::new(seed)));
 
     // WebSocket upgrade logic
     let websocket_route = warp::path("ws")
@@ -106,5 +110,5 @@ async fn run_server(no_cache: bool, port: u16) {
 #[tokio::main]
 async fn main() {
     let args = Args::parse();
-    run_server(args.no_cache, args.port).await;
+    run_server(args.no_cache, args.port, args.seed).await;
 }

@@ -106,6 +106,7 @@ pub enum GameStateResponse {
 }
 
 pub struct GameState {
+    pub seed: u32,
     pub epoch: u32,
     pub board: HashMap<Position, DbTile>,
     pub players: HashMap<u32, DbPlayer>,
@@ -114,11 +115,13 @@ pub struct GameState {
 }
 
 impl GameState {
-    pub fn new() -> Self {
+    pub fn new(seed: Option<u32>) -> Self {
         let board = HashMap::new();
-        let epoch = seconds_since(0) - 1;
+        let seed = seed.unwrap_or_else(|| rand::thread_rng().gen());
+        let epoch = Utc::now().timestamp() as u32;
 
         GameState {
+            seed,
             epoch,
             board,
             players: HashMap::new(),
@@ -267,7 +270,7 @@ impl GameState {
             // so the player can and is allowed to uncover the tile
             self.uncover(position, player_id);
             if let Some(player) = self.players.get_mut(&player_id) {
-                if is_mine(self.epoch, position, MINE_PROBABILITY) {
+                if is_mine(self.seed, position, MINE_PROBABILITY) {
                     // game over
                     player.game_over = true;
                 } else {
@@ -398,7 +401,7 @@ impl GameState {
     }
 
     pub fn is_mine(&self, position: Position) -> bool {
-        is_mine(self.epoch, position, MINE_PROBABILITY)
+        is_mine(self.seed, position, MINE_PROBABILITY)
     }
 
     pub fn touches_own_area(&self, position: Position, player_id: u32) -> bool {
@@ -423,7 +426,7 @@ mod tests {
 
     #[test]
     fn test_handle_update_action_updates_visible_area() {
-        let mut game_state = GameState::new();
+        let mut game_state = GameState::new(Some(0));
 
         // Add a player
         let join_action = PlayerAction::Join {
@@ -494,7 +497,7 @@ fn bresenham_line_towards_angle(angle: f64, origin: Position) -> impl Iterator<I
 
 
 fn is_mine(seed: u32, position: Position, probability: f64) -> bool {
-    // Step 1: Combine `x`, `y`, and `s` into a single hash value
+    // Step 1: Combine `x`, `y`, and `seed` into a single hash value
     let mut hasher = DefaultHasher::new();
     (seed, position).hash(&mut hasher);
     let hash_value = hasher.finish();
@@ -503,7 +506,7 @@ fn is_mine(seed: u32, position: Position, probability: f64) -> bool {
     // Here, we use the maximum value of u64 as a normalization factor
     let random_value = (hash_value as f64) / (u64::MAX as f64);
 
-    // Step 3: Compare the pseudo-random number with `p`
+    // Step 3: Compare the pseudo-random number with `probability`
     random_value < probability
 }
 
