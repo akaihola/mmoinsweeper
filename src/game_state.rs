@@ -184,7 +184,7 @@ impl GameState {
     pub fn handle_join_action(&mut self, visible_area: Area, token: Option<String>) -> GameStateResponse {
         let player_id = self.next_player_id;  // non-zero = playing
         self.next_player_id += 1;
-        let start_position = self.find_random_start_position();
+        let start_position = self.find_random_start_position(player_id);
         // Calculate size of visible area from action.visible_{top,bottom,left,right} fields
         // and set the visible area to be centered around the starting tile.
         let visible_width = visible_area.1.0 - visible_area.0.0 + 1;
@@ -365,23 +365,28 @@ impl GameState {
         }
     }
 
-    // Add a function to find a random starting position for a player
-    // that is not a mine and has no adjacent mines
-    // and at 10 tiles away from the nearest uncovered tile.
+    // Find a random starting position for a player that
+    // - is not a mine,
+    // - has no adjacent mines, and
+    // - is at least 10 tiles away from the nearest uncovered tile.
     // Pick a random recently uncovered tile, and walk in a random direction until a tile fulfilling
     // the criteria is found.
-    pub fn find_random_start_position(&self) -> Position {
+    pub fn find_random_start_position(&self, player_id: u32) -> Position {
         // Pick a random recently uncovered tile
-        let mut rng = rand::thread_rng();
+        let mut hasher = DefaultHasher::new();
+        player_id.hash(&mut hasher);
+        let hash_value_for_angle = hasher.finish();
+
         let origin = if self.uncover_history.is_empty() {
             (0, 0)
         } else {
-            let random_index = rng.gen_range(0..self.uncover_history.len());
+            hasher.write_i8(0);  // to get a different hash value
+            let random_index = hasher.finish() as usize % self.uncover_history.len();
             self.uncover_history.iter().nth(random_index).unwrap().clone()
         };
         // Pick a random angle and use a line drawing algorithm to walk in that direction until a
         // suitable tile is found.
-        let angle = rng.gen_range(0.0..std::f64::consts::PI * 2.0);
+        let angle = (hash_value_for_angle as f64) / (u64::MAX as f64) * 2.0 * std::f64::consts::PI;
         let mut steps = 0;
         for position in bresenham_line_towards_angle(angle, origin) {
             if self.is_uncovered(position) {
