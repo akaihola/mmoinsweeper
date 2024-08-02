@@ -106,6 +106,7 @@ pub enum GameStateResponse {
 }
 
 pub struct GameState {
+    pub seed: u32,
     pub epoch: u32,
     pub board: HashMap<Position, DbTile>,
     pub players: HashMap<u32, DbPlayer>,
@@ -114,11 +115,13 @@ pub struct GameState {
 }
 
 impl GameState {
-    pub fn new() -> Self {
+    pub fn new(seed: Option<u32>) -> Self {
         let board = HashMap::new();
-        let epoch = seconds_since(0) - 1;
+        let seed = seed.unwrap_or_else(|| rand::thread_rng().gen());
+        let epoch = Utc::now().timestamp() as u32;
 
         GameState {
+            seed,
             epoch,
             board,
             players: HashMap::new(),
@@ -181,7 +184,7 @@ impl GameState {
     pub fn handle_join_action(&mut self, visible_area: Area, token: Option<String>) -> GameStateResponse {
         let player_id = self.next_player_id;  // non-zero = playing
         self.next_player_id += 1;
-        let start_position = self.find_random_start_position();
+        let start_position = self.find_random_start_position(player_id);
         // Calculate size of visible area from action.visible_{top,bottom,left,right} fields
         // and set the visible area to be centered around the starting tile.
         let visible_width = visible_area.1.0 - visible_area.0.0 + 1;
@@ -267,7 +270,7 @@ impl GameState {
             // so the player can and is allowed to uncover the tile
             self.uncover(position, player_id);
             if let Some(player) = self.players.get_mut(&player_id) {
-                if is_mine(self.epoch, position, MINE_PROBABILITY) {
+                if is_mine(self.seed, position, MINE_PROBABILITY) {
                     // game over
                     player.game_over = true;
                 } else {
@@ -362,23 +365,28 @@ impl GameState {
         }
     }
 
-    // Add a function to find a random starting position for a player
-    // that is not a mine and has no adjacent mines
-    // and at 10 tiles away from the nearest uncovered tile.
+    // Find a random starting position for a player that
+    // - is not a mine,
+    // - has no adjacent mines, and
+    // - is at least 10 tiles away from the nearest uncovered tile.
     // Pick a random recently uncovered tile, and walk in a random direction until a tile fulfilling
     // the criteria is found.
-    pub fn find_random_start_position(&self) -> Position {
+    pub fn find_random_start_position(&self, player_id: u32) -> Position {
         // Pick a random recently uncovered tile
-        let mut rng = rand::thread_rng();
+        let mut hasher = DefaultHasher::new();
+        player_id.hash(&mut hasher);
+        let hash_value_for_angle = hasher.finish();
+
         let origin = if self.uncover_history.is_empty() {
             (0, 0)
         } else {
-            let random_index = rng.gen_range(0..self.uncover_history.len());
+            hasher.write_i8(0);  // to get a different hash value
+            let random_index = hasher.finish() as usize % self.uncover_history.len();
             self.uncover_history.iter().nth(random_index).unwrap().clone()
         };
         // Pick a random angle and use a line drawing algorithm to walk in that direction until a
         // suitable tile is found.
-        let angle = rng.gen_range(0.0..std::f64::consts::PI * 2.0);
+        let angle = (hash_value_for_angle as f64) / (u64::MAX as f64) * 2.0 * std::f64::consts::PI;
         let mut steps = 0;
         for position in bresenham_line_towards_angle(angle, origin) {
             if self.is_uncovered(position) {
@@ -398,7 +406,7 @@ impl GameState {
     }
 
     pub fn is_mine(&self, position: Position) -> bool {
-        is_mine(self.epoch, position, MINE_PROBABILITY)
+        is_mine(self.seed, position, MINE_PROBABILITY)
     }
 
     pub fn touches_own_area(&self, position: Position, player_id: u32) -> bool {
@@ -423,7 +431,7 @@ mod tests {
 
     #[test]
     fn test_handle_update_action_updates_visible_area() {
-        let mut game_state = GameState::new();
+        let mut game_state = GameState::new(Some(0));
 
         // Add a player
         let join_action = PlayerAction::Join {
@@ -494,7 +502,7 @@ fn bresenham_line_towards_angle(angle: f64, origin: Position) -> impl Iterator<I
 
 
 fn is_mine(seed: u32, position: Position, probability: f64) -> bool {
-    // Step 1: Combine `x`, `y`, and `s` into a single hash value
+    // Step 1: Combine `x`, `y`, and `seed` into a single hash value
     let mut hasher = DefaultHasher::new();
     (seed, position).hash(&mut hasher);
     let hash_value = hasher.finish();
@@ -503,7 +511,7 @@ fn is_mine(seed: u32, position: Position, probability: f64) -> bool {
     // Here, we use the maximum value of u64 as a normalization factor
     let random_value = (hash_value as f64) / (u64::MAX as f64);
 
-    // Step 3: Compare the pseudo-random number with `p`
+    // Step 3: Compare the pseudo-random number with `probability`
     random_value < probability
 }
 
