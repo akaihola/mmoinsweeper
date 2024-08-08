@@ -87,3 +87,16 @@ To use this configuration:
 6. If the test is successful, reload Nginx: `systemctl reload nginx`.
 
 This configuration will handle TLS termination, proxy requests to your Rust backend, and manage Let's Encrypt certificate renewals.
+
+
+## Development Setup
+
+### Setting up Git Hooks
+
+To ensure code consistency, we use a pre-commit hook to automatically run `cargo fmt`. To set this up, run the following command in the root of the project:
+
+```bash
+chmod +x setup_hooks.sh && ./setup_hooks.sh
+```
+
+This will create a pre-commit hook that runs `cargo fmt` before each commit.
