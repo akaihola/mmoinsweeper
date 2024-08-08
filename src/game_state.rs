@@ -1,5 +1,5 @@
-use std::collections::{HashMap, HashSet, VecDeque};
 use std::collections::hash_map::DefaultHasher;
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::hash::{Hash, Hasher};
 
 use chrono::Utc;
@@ -22,7 +22,7 @@ fn seconds_since(epoch: u32) -> ServerTime {
 const MINE_PROBABILITY: f64 = 0.2;
 
 pub struct DbTile {
-    pub uncovered: ServerTime,  // seconds since beginning of game, zero = not uncovered
+    pub uncovered: ServerTime, // seconds since beginning of game, zero = not uncovered
     pub player_id: u32,
 }
 
@@ -111,7 +111,7 @@ pub struct GameState {
     pub board: HashMap<Position, DbTile>,
     pub players: HashMap<u32, DbPlayer>,
     pub next_player_id: u32,
-    uncover_history: VecDeque<Position>,  // (x, y)
+    uncover_history: VecDeque<Position>, // (x, y)
 }
 
 impl GameState {
@@ -130,7 +130,12 @@ impl GameState {
         }
     }
 
-    pub fn handle_update_nickname_action(&mut self, player_id: u32, token: String, new_name: String) -> GameStateResponse {
+    pub fn handle_update_nickname_action(
+        &mut self,
+        player_id: u32,
+        token: String,
+        new_name: String,
+    ) -> GameStateResponse {
         if self.player_valid_and_playing(player_id, &token) {
             if let Some(player) = self.players.get_mut(&player_id) {
                 player.name = new_name.clone();
@@ -181,21 +186,25 @@ impl GameState {
         }
     }
 
-    pub fn handle_join_action(&mut self, visible_area: Area, token: Option<String>) -> GameStateResponse {
-        let player_id = self.next_player_id;  // non-zero = playing
+    pub fn handle_join_action(
+        &mut self,
+        visible_area: Area,
+        token: Option<String>,
+    ) -> GameStateResponse {
+        let player_id = self.next_player_id; // non-zero = playing
         self.next_player_id += 1;
         let start_position = self.find_random_start_position(player_id);
         // Calculate size of visible area from action.visible_{top,bottom,left,right} fields
         // and set the visible area to be centered around the starting tile.
-        let visible_width = visible_area.1.0 - visible_area.0.0 + 1;
-        let visible_height = visible_area.1.1 - visible_area.0.1 + 1;
+        let visible_width = visible_area.1 .0 - visible_area.0 .0 + 1;
+        let visible_height = visible_area.1 .1 - visible_area.0 .1 + 1;
         let visible_area = (
             (
                 start_position.0 - visible_width / 2,  // left
-                start_position.1 - visible_height / 2,  // top
+                start_position.1 - visible_height / 2, // top
             ),
             (
-                start_position.0 + visible_width / 2, // right
+                start_position.0 + visible_width / 2,  // right
                 start_position.1 + visible_height / 2, // bottom
             ),
         );
@@ -207,27 +216,33 @@ impl GameState {
                 (
                     uuid::Uuid::new_v4().to_string(),
                     format!("Player {}", player_id),
-                    Some(format!("Player matching token {} not found. Issuing a new token.", token))
+                    Some(format!(
+                        "Player matching token {} not found. Issuing a new token.",
+                        token
+                    )),
                 )
             }
         } else {
             (
                 uuid::Uuid::new_v4().to_string(),
                 format!("Player {}", player_id),
-                Some("No token provided. Issuing a new token.".to_string())
+                Some("No token provided. Issuing a new token.".to_string()),
             )
         };
 
-        self.players.insert(player_id, DbPlayer {
-            join_time: seconds_since(self.epoch),
-            token: token.clone(),
-            color: format!("#{:06x}", rand::thread_rng().gen_range(0..0xFFFFFF)),
-            score: 0,
-            game_over: false,
-            sender: None,
-            visible_area,
-            name,
-        });
+        self.players.insert(
+            player_id,
+            DbPlayer {
+                join_time: seconds_since(self.epoch),
+                token: token.clone(),
+                color: format!("#{:06x}", rand::thread_rng().gen_range(0..0xFFFFFF)),
+                score: 0,
+                game_over: false,
+                sender: None,
+                visible_area,
+                name,
+            },
+        );
 
         self.uncover(start_position, player_id);
         // Broadcast the opening tile to all players who should see it
@@ -243,7 +258,11 @@ impl GameState {
         }
     }
 
-    pub fn handle_update_action(&mut self, player_id: u32, area_to_update: Area) -> GameStateResponse {
+    pub fn handle_update_action(
+        &mut self,
+        player_id: u32,
+        area_to_update: Area,
+    ) -> GameStateResponse {
         if let Some(player) = self.players.get_mut(&player_id) {
             player.visible_area = area_to_update;
         } else {
@@ -257,14 +276,26 @@ impl GameState {
         GameStateResponse::Updated { tiles, players }
     }
 
-    pub fn handle_uncover_action(&mut self, player_id: u32, token: String, position: Position, visible_area: Area) -> GameStateResponse {
+    pub fn handle_uncover_action(
+        &mut self,
+        player_id: u32,
+        token: String,
+        position: Position,
+        visible_area: Area,
+    ) -> GameStateResponse {
         let mut error = None;
         if !self.player_valid_and_playing(player_id, &token) {
             error = Some(format!("Invalid player {} or token {}", player_id, token));
         } else if self.is_uncovered(position) {
-            error = Some(format!("Tile already uncovered at {:?} by player {}", position, player_id));
+            error = Some(format!(
+                "Tile already uncovered at {:?} by player {}",
+                position, player_id
+            ));
         } else if !self.touches_own_area(position, player_id) {
-            error = Some(format!("Player {} tried to uncover tile outside their area at {:?}", player_id, position));
+            error = Some(format!(
+                "Player {} tried to uncover tile outside their area at {:?}",
+                player_id, position
+            ));
         } else {
             // game started, not yet game over, and tile not yet uncovered
             // so the player can and is allowed to uncover the tile
@@ -288,22 +319,36 @@ impl GameState {
         }
     }
 
-    pub fn process_action(&mut self, player_id: Option<u32>, action: PlayerAction) -> GameStateResponse {
+    pub fn process_action(
+        &mut self,
+        player_id: Option<u32>,
+        action: PlayerAction,
+    ) -> GameStateResponse {
         match action {
-            PlayerAction::Join { visible_area, token } => self.handle_join_action(visible_area, token),
-            PlayerAction::Update { area_to_update } => if let Some(id) = player_id {
-                self.handle_update_action(id, area_to_update)
-            } else {
-                GameStateResponse::Error {
-                    message: "Can't pan view before joining the game".to_string(),
+            PlayerAction::Join {
+                visible_area,
+                token,
+            } => self.handle_join_action(visible_area, token),
+            PlayerAction::Update { area_to_update } => {
+                if let Some(id) = player_id {
+                    self.handle_update_action(id, area_to_update)
+                } else {
+                    GameStateResponse::Error {
+                        message: "Can't pan view before joining the game".to_string(),
+                    }
                 }
             }
-            PlayerAction::Uncover { player_id, token, position, visible_area } => {
-                self.handle_uncover_action(player_id, token, position, visible_area)
-            },
-            PlayerAction::UpdateNickname { player_id, token, new_name } => {
-                self.handle_update_nickname_action(player_id, token, new_name)
-            }
+            PlayerAction::Uncover {
+                player_id,
+                token,
+                position,
+                visible_area,
+            } => self.handle_uncover_action(player_id, token, position, visible_area),
+            PlayerAction::UpdateNickname {
+                player_id,
+                token,
+                new_name,
+            } => self.handle_update_nickname_action(player_id, token, new_name),
         }
     }
 
@@ -315,44 +360,61 @@ impl GameState {
         }
     }
 
-    pub fn players_response(&self, player_ids: Option<&HashSet<u32>>) -> HashMap<u32, ClientPlayer> {
-        self.players.iter().filter_map(|(&id, player)| {
-            if player_ids.map_or(true, |ids| ids.contains(&id)) {
-                Some((id, ClientPlayer {
-                    join_time: self.epoch + player.join_time,
-                    color: player.color.clone(),
-                    score: player.score,
-                    name: player.name.clone(),
-                }))
-            } else {
-                None
-            }
-        }).collect()
+    pub fn players_response(
+        &self,
+        player_ids: Option<&HashSet<u32>>,
+    ) -> HashMap<u32, ClientPlayer> {
+        self.players
+            .iter()
+            .filter_map(|(&id, player)| {
+                if player_ids.map_or(true, |ids| ids.contains(&id)) {
+                    Some((
+                        id,
+                        ClientPlayer {
+                            join_time: self.epoch + player.join_time,
+                            color: player.color.clone(),
+                            score: player.score,
+                            name: player.name.clone(),
+                        },
+                    ))
+                } else {
+                    None
+                }
+            })
+            .collect()
     }
 
     pub fn visible_tiles(&self, area: Area) -> HashMap<PositionString, ClientTile> {
-        self.board.iter().filter_map(|(&(x, y), db_tile)| {
-            if x >= area.0.0 && x <= area.1.0 && y >= area.0.1 && y <= area.1.1 {
-                let position_string = format!("{},{}", x, y);
-                let tile = ClientTile {
-                    player_id: db_tile.player_id,
-                    adjacent_mines: self.adjacent_mines((x, y)),
-                    is_mine: self.is_mine((x, y)),
-                };
-                Some((position_string, tile))
-            } else {
-                None
-            }
-        }).collect()
+        self.board
+            .iter()
+            .filter_map(|(&(x, y), db_tile)| {
+                if x >= area.0 .0 && x <= area.1 .0 && y >= area.0 .1 && y <= area.1 .1 {
+                    let position_string = format!("{},{}", x, y);
+                    let tile = ClientTile {
+                        player_id: db_tile.player_id,
+                        adjacent_mines: self.adjacent_mines((x, y)),
+                        is_mine: self.is_mine((x, y)),
+                    };
+                    Some((position_string, tile))
+                } else {
+                    None
+                }
+            })
+            .collect()
     }
 
     pub fn uncover(&mut self, position: Position, player_id: u32) {
-        if self.is_uncovered(position) { return; }
+        if self.is_uncovered(position) {
+            return;
+        }
         let current_time = seconds_since(self.epoch);
-        self.board.insert(position, DbTile {
-            player_id,
-            uncovered: current_time,
-        });
+        self.board.insert(
+            position,
+            DbTile {
+                player_id,
+                uncovered: current_time,
+            },
+        );
         self.uncover_history.push_back(position);
         // Remove items older than 10 minutes (600 seconds) unless the list is shorter than 100 items
         while let Some(x_y) = self.uncover_history.front() {
@@ -380,9 +442,13 @@ impl GameState {
         let origin = if self.uncover_history.is_empty() {
             (0, 0)
         } else {
-            hasher.write_i8(0);  // to get a different hash value
+            hasher.write_i8(0); // to get a different hash value
             let random_index = hasher.finish() as usize % self.uncover_history.len();
-            self.uncover_history.iter().nth(random_index).unwrap().clone()
+            self.uncover_history
+                .iter()
+                .nth(random_index)
+                .unwrap()
+                .clone()
         };
         // Pick a random angle and use a line drawing algorithm to walk in that direction until a
         // suitable tile is found.
@@ -421,7 +487,9 @@ impl GameState {
     }
 
     pub fn adjacent_mines(&self, position: Position) -> i8 {
-        tiles_around(position).filter(|&pos| self.is_mine(pos)).count() as i8
+        tiles_around(position)
+            .filter(|&pos| self.is_mine(pos))
+            .count() as i8
     }
 }
 
@@ -454,18 +522,21 @@ mod tests {
 
         // Check if the player's visible area was updated
         let updated_player = game_state.players.get(&player_id).unwrap();
-        assert_eq!(updated_player.visible_area, new_area, "Player's visible area should be updated");
+        assert_eq!(
+            updated_player.visible_area, new_area,
+            "Player's visible area should be updated"
+        );
     }
 }
 
 // iterate over all tiles around a position, but not the tile itself
-fn tiles_around(position: Position) -> impl Iterator<Item=Position> {
-    (-1..=1).flat_map(move |dx|
-    (-1..=1).map(move |dy| (position.0 + dx, position.1 + dy))
-    ).filter(move |&pos| pos != position)
+fn tiles_around(position: Position) -> impl Iterator<Item = Position> {
+    (-1..=1)
+        .flat_map(move |dx| (-1..=1).map(move |dy| (position.0 + dx, position.1 + dy)))
+        .filter(move |&pos| pos != position)
 }
 
-fn bresenham_line_towards_angle(angle: f64, origin: Position) -> impl Iterator<Item=Position> {
+fn bresenham_line_towards_angle(angle: f64, origin: Position) -> impl Iterator<Item = Position> {
     let dx = (angle.cos() * 10000.0).round() as i32;
     let dy = (angle.sin() * 10000.0).round() as i32;
     let mut x = origin.0;
@@ -500,7 +571,6 @@ fn bresenham_line_towards_angle(angle: f64, origin: Position) -> impl Iterator<I
     })
 }
 
-
 fn is_mine(seed: u32, position: Position, probability: f64) -> bool {
     // Step 1: Combine `x`, `y`, and `seed` into a single hash value
     let mut hasher = DefaultHasher::new();
@@ -514,7 +584,6 @@ fn is_mine(seed: u32, position: Position, probability: f64) -> bool {
     // Step 3: Compare the pseudo-random number with `probability`
     random_value < probability
 }
-
 
 // Helper function to check if two areas intersect
 fn areas_intersect(area1: Area, area2: Area) -> bool {

@@ -4,9 +4,9 @@ use std::sync::Arc;
 use clap::Parser;
 use futures_util::{SinkExt, StreamExt};
 use tokio::sync::{mpsc, Mutex};
-use warp::Filter;
-use warp::http::header::{CACHE_CONTROL, EXPIRES, HeaderMap, HeaderValue, PRAGMA};
+use warp::http::header::{HeaderMap, HeaderValue, CACHE_CONTROL, EXPIRES, PRAGMA};
 use warp::ws::Message;
+use warp::Filter;
 
 use game_state::{GameState, PlayerAction};
 
@@ -30,7 +30,10 @@ struct Args {
     seed: Option<u32>,
 }
 
-async fn upgrade_ws(ws: warp::ws::Ws, game_state: Arc<Mutex<GameState>>) -> Result<impl warp::Reply, Infallible> {
+async fn upgrade_ws(
+    ws: warp::ws::Ws,
+    game_state: Arc<Mutex<GameState>>,
+) -> Result<impl warp::Reply, Infallible> {
     Ok(ws.on_upgrade(move |socket| handle_connection(socket, game_state)))
 }
 
@@ -57,7 +60,11 @@ async fn handle_connection(ws: warp::ws::WebSocket, game_state: Arc<Mutex<GameSt
 
                 if player_id.is_none() {
                     if let PlayerAction::Join { .. } = action {
-                        if let GameStateResponse::Joined { player_id: new_player_id, .. } = response {
+                        if let GameStateResponse::Joined {
+                            player_id: new_player_id,
+                            ..
+                        } = response
+                        {
                             player_id = Some(new_player_id);
                             game_state.set_player_sender(new_player_id, tx.clone());
                         }
@@ -81,7 +88,10 @@ fn get_headers(no_cache: bool) -> HeaderMap {
     if no_cache {
         headers.insert(CACHE_CONTROL, HeaderValue::from_static("no-store"));
         headers.insert(PRAGMA, HeaderValue::from_static("no-cache"));
-        headers.insert(EXPIRES, HeaderValue::from_static("Sat, 01 Jan 2000 00:00:00 GMT"));
+        headers.insert(
+            EXPIRES,
+            HeaderValue::from_static("Sat, 01 Jan 2000 00:00:00 GMT"),
+        );
     }
     headers
 }
