@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Create pre-commit hook
 cat << EOF > .git/hooks/pre-commit

@@ -87,6 +87,8 @@ To use this configuration:
 6. If the test is successful, reload Nginx: `systemctl reload nginx`.
 
 This configuration will handle TLS termination, proxy requests to your Rust backend, and manage Let's Encrypt certificate renewals.
+
+
 ## Development Setup
 
 ### Setting up Git Hooks
